@@ -1,0 +1,20 @@
+/* ============================================================
+   filters.css — Instagram-style CSS image filters
+   ============================================================ */
+
+.filter-none    { filter: none; }
+.filter-warm    { filter: sepia(0.3) saturate(1.4) brightness(1.05) hue-rotate(-10deg); }
+.filter-cool    { filter: saturate(0.9) brightness(1.05) hue-rotate(20deg) contrast(1.05); }
+.filter-mono    { filter: grayscale(1) contrast(1.1); }
+.filter-vintage { filter: sepia(0.5) contrast(0.9) brightness(1.1) saturate(0.8); }
+.filter-fade    { filter: brightness(1.1) contrast(0.85) saturate(0.8); }
+.filter-vivid   { filter: saturate(1.8) contrast(1.1) brightness(1.02); }
+
+/* Filter thumbnails (static color swatches with CSS overlays) */
+.filter-thumb.filter-none    { background: linear-gradient(135deg, #f093fb, #f5576c, #4facfe); }
+.filter-thumb.filter-warm    { background: linear-gradient(135deg, #f7971e, #ffd200); filter: sepia(0.3) saturate(1.4); }
+.filter-thumb.filter-cool    { background: linear-gradient(135deg, #56ccf2, #2f80ed); filter: hue-rotate(20deg); }
+.filter-thumb.filter-mono    { background: linear-gradient(135deg, #bdc3c7, #2c3e50); filter: grayscale(1); }
+.filter-thumb.filter-vintage { background: linear-gradient(135deg, #d4a574, #8b4513); filter: sepia(0.5); }
+.filter-thumb.filter-fade    { background: linear-gradient(135deg, #a8edea, #fed6e3); filter: brightness(1.1) contrast(0.85); }
+.filter-thumb.filter-vivid   { background: linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3); filter: saturate(1.8); }

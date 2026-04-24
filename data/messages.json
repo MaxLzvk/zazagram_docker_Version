@@ -1,0 +1,82 @@
+[
+    {
+        "id": 1,
+        "sender_id": 2,
+        "receiver_id": 1,
+        "content": "Hey Alex! Love your coastal shot. Where was that?",
+        "is_read": true,
+        "created_at": "2026-04-15T20:00:00Z"
+    },
+    {
+        "id": 2,
+        "sender_id": 1,
+        "receiver_id": 2,
+        "content": "Thanks Mia! It was the Algarve coast in Portugal. Highly recommend!",
+        "is_read": true,
+        "created_at": "2026-04-15T20:15:00Z"
+    },
+    {
+        "id": 3,
+        "sender_id": 2,
+        "receiver_id": 1,
+        "content": "Oh wow, that's on my bucket list! Did you use a filter on the shot?",
+        "is_read": true,
+        "created_at": "2026-04-15T20:20:00Z"
+    },
+    {
+        "id": 4,
+        "sender_id": 1,
+        "receiver_id": 2,
+        "content": "Just the warm filter in Zazagram! No post-processing needed 📷",
+        "is_read": false,
+        "created_at": "2026-04-15T20:25:00Z"
+    },
+    {
+        "id": 5,
+        "sender_id": 3,
+        "receiver_id": 1,
+        "content": "Bro, wanna join my morning run crew? 6am every day 💪",
+        "is_read": true,
+        "created_at": "2026-04-17T07:30:00Z"
+    },
+    {
+        "id": 6,
+        "sender_id": 4,
+        "receiver_id": 2,
+        "content": "Mia! Can you design a logo for my food blog? 🙏",
+        "is_read": false,
+        "created_at": "2026-04-19T11:00:00Z"
+    },
+    {
+        "id": 7,
+        "sender_id": 1,
+        "receiver_id": 3,
+        "content": "ggrrg",
+        "is_read": false,
+        "created_at": "2026-04-23T12:54:29Z"
+    },
+    {
+        "id": 8,
+        "sender_id": 1,
+        "receiver_id": 3,
+        "content": "fefef",
+        "is_read": false,
+        "created_at": "2026-04-23T13:28:57Z"
+    },
+    {
+        "id": 9,
+        "sender_id": 1,
+        "receiver_id": 3,
+        "content": "Hello nigga",
+        "is_read": false,
+        "created_at": "2026-04-23T13:29:01Z"
+    },
+    {
+        "id": 10,
+        "sender_id": 1,
+        "receiver_id": 4,
+        "content": "feef",
+        "is_read": false,
+        "created_at": "2026-04-23T13:38:20Z"
+    }
+]

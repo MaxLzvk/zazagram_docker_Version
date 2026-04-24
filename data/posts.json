@@ -1,0 +1,74 @@
+[
+    {
+        "id": 1,
+        "user_id": 1,
+        "caption": "Golden hour at the coast 🌅 Nothing beats this light.",
+        "image": "post_1.jpg",
+        "filter": "warm",
+        "created_at": "2026-04-15T18:30:00Z",
+        "updated_at": "2026-04-15T18:30:00Z"
+    },
+    {
+        "id": 4,
+        "user_id": 4,
+        "caption": "Homemade croissants this Sunday morning 🥐 Recipe in bio!",
+        "image": "post_4.jpg",
+        "filter": "vintage",
+        "created_at": "2026-04-18T09:15:00Z",
+        "updated_at": "2026-04-18T09:15:00Z"
+    },
+    {
+        "id": 5,
+        "user_id": 5,
+        "caption": "Just deployed my first open source project 🚀 Check it out!",
+        "image": "",
+        "filter": "none",
+        "created_at": "2026-04-20T15:00:00Z",
+        "updated_at": "2026-04-20T15:00:00Z"
+    },
+    {
+        "id": 6,
+        "user_id": 1,
+        "caption": "Street photography in the city. Every face tells a story 📷",
+        "image": "post_6.jpg",
+        "filter": "mono",
+        "created_at": "2026-04-21T14:00:00Z",
+        "updated_at": "2026-04-21T14:00:00Z"
+    },
+    {
+        "id": 7,
+        "user_id": 6,
+        "caption": "Hello",
+        "image": "",
+        "filter": "none",
+        "created_at": "2026-04-23T12:47:11Z",
+        "updated_at": "2026-04-23T12:47:11Z"
+    },
+    {
+        "id": 8,
+        "user_id": 1,
+        "caption": "",
+        "image": "post_1776951551_1.png",
+        "filter": "none",
+        "created_at": "2026-04-23T13:39:11Z",
+        "updated_at": "2026-04-23T13:39:11Z"
+    },
+    {
+        "id": 9,
+        "user_id": 7,
+        "caption": "NIGGERS",
+        "image": "post_1776953097_7.png",
+        "filter": "fade",
+        "created_at": "2026-04-23T14:04:57Z",
+        "updated_at": "2026-04-23T14:04:57Z"
+    },
+    {
+        "id": 10,
+        "user_id": 1,
+        "caption": "dwd",
+        "image": "",
+        "filter": "none",
+        "created_at": "2026-04-23T19:49:25Z",
+        "updated_at": "2026-04-23T19:49:25Z"
+    }
+]

@@ -1,0 +1,57 @@
+services:
+  app:
+    build: .
+    container_name: zazagram-app
+    ports:
+      - "8082:80"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: zazagram
+      DB_USER: zazagram
+      DB_PASS: zazagram
+    volumes:
+      - .:/var/www/html
+      - ./uploads:/var/www/html/uploads
+    command: >
+      bash -c "chmod 777 /var/www/html/uploads && apache2-foreground"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: zazagram-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: zazagram
+      MYSQL_USER: zazagram
+      MYSQL_PASSWORD: zazagram
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: zazagram-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
