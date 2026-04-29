@@ -22,6 +22,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $users = db_update($users, $user_id, ['is_banned' => false, 'updated_at' => now()]);
         db_write('users.json', $users);
         $flash = 'User unbanned.';
+    } elseif ($act === 'change_password' && $user_id) {
+        $new_pass = trim($_POST['new_password'] ?? '');
+        if (strlen($new_pass) < 6) {
+            $flash = 'Password must be at least 6 characters.';
+        } else {
+            $hashed = password_hash($new_pass, PASSWORD_BCRYPT);
+            try {
+                $pdo = db();
+                $pdo->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?')
+                    ->execute([$hashed, $user_id]);
+                $flash = 'Password updated successfully for user #' . $user_id . '.';
+            } catch (Throwable $e) { $flash = 'Error updating password: ' . $e->getMessage(); }
+        }
     } elseif ($act === 'delete_user' && $user_id && $user_id !== $me['id']) {
         // Remove user's posts, comments, likes, friends, messages, notifications
         $target = db_find_one($users, 'id', $user_id);
@@ -118,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Throwable $e) { $flash = 'Error unblocking IP.'; }
         }
     }
+}
 
 // Stats
 $total_users   = count($users);
@@ -197,6 +211,20 @@ include __DIR__ . '/../includes/header.php';
                                     <button name="action" value="delete_user" class="btn btn-sm btn-danger"
                                             onclick="return confirm('Delete user and all their data?')">Delete</button>
                                 </form>
+                                <button class="btn btn-sm" style="background:rgba(139,92,246,.2);border:1px solid rgba(139,92,246,.4);color:var(--purple-hi)"
+                                    onclick="togglePwForm(<?= $u['id'] ?>)">🔑 Password</button>
+                                <div id="pw-form-<?= $u['id'] ?>" style="display:none;margin-top:0.5rem">
+                                    <form method="POST" style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap">
+                                        <input type="hidden" name="action" value="change_password">
+                                        <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+                                        <input type="password" name="new_password" placeholder="New password (min 6)" required
+                                            style="background:rgba(255,255,255,.05);border:1px solid rgba(139,92,246,.3);border-radius:7px;padding:0.3rem 0.65rem;color:var(--text);font-size:0.83rem;min-width:160px">
+                                        <button type="submit" class="btn btn-sm" style="background:rgba(139,92,246,.25);border:1px solid rgba(139,92,246,.5);color:var(--purple-hi)"
+                                            onclick="return confirm('Change password for this user?')">Save</button>
+                                        <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-muted)"
+                                            onclick="togglePwForm(<?= $u['id'] ?>)">Cancel</button>
+                                    </form>
+                                </div>
                             <?php else: ?>
                                 <span class="muted">— You —</span>
                             <?php endif; ?>
@@ -358,6 +386,10 @@ function showTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + name).style.display = 'block';
     event.target.classList.add('active');
+}
+function togglePwForm(uid) {
+    const el = document.getElementById('pw-form-' + uid);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>
 
