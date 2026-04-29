@@ -43,7 +43,7 @@ $page_title = $page_title ?? 'Zazagram';
 
             <div class="nav-actions">
                 <a href="<?= BASE_URL ?>/pages/feed.php" class="nav-btn" title="Feed">Feed</a>
-                <a href="<?= BASE_URL ?>/pages/create_post.php" class="nav-btn" title="New Post">+ Post</a>
+                <a href="<?= BASE_URL ?>/pages/create_post.php" class="nav-btn nav-btn-cta" title="New Post">+ Post</a>
 
                 <a href="<?= BASE_URL ?>/pages/messages.php" class="nav-btn nav-notif" title="Messages">
                     Msgs
