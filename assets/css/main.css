@@ -996,10 +996,35 @@ body.login-page .demo-btn:hover {
 .suggestion-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
 .suggestion-item:last-of-type { border-bottom: none; }
 .suggestion-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.suggestion-item > div { flex: 1; min-width: 0; }
-.suggestion-item a { font-size: 0.92rem; font-weight: 600; display: block; }
+.suggestion-item > div { flex: 1; min-width: 0; overflow: hidden; }
+.suggestion-item a { font-size: 0.92rem; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .suggestion-item a:hover { color: var(--orange); }
-.suggestion-item p { font-size: 0.8rem; color: var(--text-muted); }
+.suggestion-item p { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestion-item .btn {
+    flex-shrink: 0;
+    padding: 0.28rem 0.72rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: var(--r-full);
+    background: transparent;
+    border: 1.5px solid rgba(232,98,10,.55);
+    color: var(--orange);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+.suggestion-item .btn:hover {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #000;
+    transform: scale(1.05);
+}
+.suggestion-item .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
 
 .left-nav-item {
     display: flex;
