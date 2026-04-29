@@ -43,6 +43,8 @@ document.querySelectorAll('.alert').forEach(el => {
         'rgba(232,98,10,',
         'rgba(212,160,23,',
         'rgba(255,130,40,',
+        'rgba(139,92,246,',
+        'rgba(6,182,212,',
     ];
 
     function resize() {
