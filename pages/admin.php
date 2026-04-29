@@ -7,6 +7,17 @@ $me    = get_current_user_data();
 $users = db_read('users.json');
 $posts = db_read('posts.json');
 
+// ── Admin action logger ──────────────────────────────────────
+function log_admin_action(array $me, string $action, string $target_type = '', int $target_id = 0, string $details = ''): void {
+    try {
+        $ip = trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '')[0]);
+        db()->prepare(
+            'INSERT INTO admin_logs (admin_id, admin_username, action, target_type, target_id, details, ip, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+        )->execute([$me['id'], $me['username'], $action, $target_type, $target_id ?: null, $details, $ip]);
+    } catch (Throwable $e) {}
+}
+
 // Handle actions
 $flash = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -15,12 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_id = (int)($_POST['post_id'] ?? 0);
 
     if ($act === 'ban' && $user_id && $user_id !== $me['id']) {
+        $target = db_find_one($users, 'id', $user_id);
         $users = db_update($users, $user_id, ['is_banned' => true, 'updated_at' => now()]);
         db_write('users.json', $users);
+        log_admin_action($me, 'ban_user', 'user', $user_id, 'Banned @'.($target['username']??''));
         $flash = 'User banned.';
     } elseif ($act === 'unban' && $user_id) {
+        $target = db_find_one($users, 'id', $user_id);
         $users = db_update($users, $user_id, ['is_banned' => false, 'updated_at' => now()]);
         db_write('users.json', $users);
+        log_admin_action($me, 'unban_user', 'user', $user_id, 'Unbanned @'.($target['username']??''));
         $flash = 'User unbanned.';
     } elseif ($act === 'change_password' && $user_id) {
         $new_pass = trim($_POST['new_password'] ?? '');
@@ -29,11 +44,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hashed = password_hash($new_pass, PASSWORD_BCRYPT);
             try {
+                $target = db_find_one($users, 'id', $user_id);
                 $pdo = db();
                 $pdo->prepare('UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?')
                     ->execute([$hashed, $user_id]);
+                log_admin_action($me, 'change_password', 'user', $user_id, 'Changed password for @'.($target['username']??''));
                 $flash = 'Password updated successfully for user #' . $user_id . '.';
             } catch (Throwable $e) { $flash = 'Error updating password: ' . $e->getMessage(); }
+        }
+    } elseif ($act === 'change_role' && $user_id && is_superadmin()) {
+        $new_role = $_POST['new_role'] ?? '';
+        if (in_array($new_role, ['user', 'admin', 'superadmin']) && $user_id !== $me['id']) {
+            $target = db_find_one($users, 'id', $user_id);
+            try {
+                db()->prepare('UPDATE users SET role = ?, updated_at = NOW() WHERE id = ?')
+                   ->execute([$new_role, $user_id]);
+                log_admin_action($me, 'change_role', 'user', $user_id,
+                    'Changed role of @'.($target['username']??'').' from '.($target['role']??'').' to '.$new_role);
+                $flash = 'Role updated to ' . $new_role . ' for user #' . $user_id . '.';
+                $users = db_read('users.json');
+            } catch (Throwable $e) { $flash = 'Error changing role.'; }
         }
     } elseif ($act === 'delete_user' && $user_id && $user_id !== $me['id']) {
         // Remove user's posts, comments, likes, friends, messages, notifications
@@ -45,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (file_exists($pic)) unlink($pic);
         }
 
+        log_admin_action($me, 'delete_user', 'user', $user_id, 'Deleted @'.($target['username']??''));
         $users = db_delete($users, $user_id);
         db_write('users.json', $users);
 
@@ -96,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $img = UPLOADS_PATH . '/' . $post['image'];
             if (file_exists($img)) unlink($img);
         }
+        log_admin_action($me, 'delete_post', 'post', $post_id, 'Deleted post #'.$post_id);
         $posts_data = db_delete($posts_data, $post_id);
         db_write('posts.json', $posts_data);
 
@@ -118,6 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare(
                     'INSERT IGNORE INTO blocked_ips (ip, reason, blocked_by, created_at) VALUES (?, ?, ?, NOW())'
                 )->execute([$ip_to_block, $reason, $me['id']]);
+                log_admin_action($me, 'block_ip', 'ip', 0, "Blocked IP {$ip_to_block}".($reason?" reason: {$reason}":''));
                 $flash = "IP {$ip_to_block} has been blocked.";
             } catch (Throwable $e) { $flash = 'Error blocking IP.'; }
         }
@@ -127,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo = db();
                 $pdo->prepare('DELETE FROM blocked_ips WHERE ip = ?')->execute([$ip_to_unblock]);
+                log_admin_action($me, 'unblock_ip', 'ip', 0, "Unblocked IP {$ip_to_unblock}");
                 $flash = "IP {$ip_to_unblock} has been unblocked.";
             } catch (Throwable $e) { $flash = 'Error unblocking IP.'; }
         }
@@ -150,12 +184,22 @@ try {
     $blocked_ips_set  = [];
 }
 
+// Admin action logs (superadmin only)
+$admin_logs = [];
+if (is_superadmin()) {
+    try {
+        $admin_logs = db()->query(
+            'SELECT * FROM admin_logs ORDER BY created_at DESC LIMIT 300'
+        )->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) { $admin_logs = []; }
+}
+
 $page_title = 'Admin Panel';
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container admin-panel">
-    <h2>Admin Panel</h2>
+    <h2>Admin Panel <?php if (is_superadmin()): ?><span style="font-size:0.7rem;background:linear-gradient(90deg,#f59e0b,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900;letter-spacing:.05em;vertical-align:middle">⭐ SUPER ADMIN</span><?php endif; ?></h2>
 
     <?php if ($flash): ?>
         <div class="alert alert-success"><?= htmlspecialchars($flash) ?></div>
@@ -175,6 +219,9 @@ include __DIR__ . '/../includes/header.php';
         <button class="tab-btn active" onclick="showTab('users')">Users</button>
         <button class="tab-btn" onclick="showTab('posts')">Posts</button>
         <button class="tab-btn" onclick="showTab('visitors')">🌐 Visitor IPs</button>
+        <?php if (is_superadmin()): ?>
+        <button class="tab-btn" onclick="showTab('superadmin')" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(139,92,246,.15));border-color:rgba(245,158,11,.4);color:#f59e0b">⭐ Super Admin</button>
+        <?php endif; ?>
     </div>
 
     <!-- Users tab -->
@@ -196,7 +243,19 @@ include __DIR__ . '/../includes/header.php';
                             </a>
                         </td>
                         <td><?= htmlspecialchars($u['email']) ?></td>
-                        <td><span class="role-badge role-<?= $u['role'] ?>"><?= $u['role'] ?></span></td>
+                        <td><span class="role-badge role-<?= $u['role'] ?>"><?= $u['role'] ?></span>
+                            <?php if (is_superadmin() && $u['id'] !== $me['id']): ?>
+                            <form method="POST" style="display:inline;margin-left:4px">
+                                <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+                                <input type="hidden" name="action" value="change_role">
+                                <select name="new_role" onchange="this.form.submit()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:var(--text);font-size:0.75rem;padding:0.15rem 0.3rem;cursor:pointer">
+                                    <option value="user"     <?= $u['role']==='user'?'selected':'' ?>>user</option>
+                                    <option value="admin"    <?= $u['role']==='admin'?'selected':'' ?>>admin</option>
+                                    <option value="superadmin" <?= $u['role']==='superadmin'?'selected':'' ?>>superadmin</option>
+                                </select>
+                            </form>
+                            <?php endif; ?>
+                        </td>
                         <td><?= $u['is_banned'] ? 'Banned' : 'Active' ?></td>
                         <td><?= date('M j, Y', strtotime($u['created_at'])) ?></td>
                         <td class="action-btns">
@@ -382,6 +441,65 @@ include __DIR__ . '/../includes/header.php';
             </tbody>
         </table>
     </div>
+
+    <?php if (is_superadmin()): ?>
+    <!-- Super Admin tab -->
+    <div id="tab-superadmin" class="tab-content card" style="display:none">
+        <h3>⭐ Admin Action Logs <small style="font-weight:400;font-size:0.8rem;color:var(--text-muted)">(last 300 actions)</small></h3>
+
+        <?php if (!$admin_logs): ?>
+            <p style="color:var(--text-muted);text-align:center;padding:2rem">No admin actions logged yet.</p>
+        <?php else: ?>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Admin</th>
+                    <th>Action</th>
+                    <th>Target</th>
+                    <th>Details</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $action_colors = [
+                    'ban_user'        => '#f59e0b',
+                    'unban_user'      => '#22c55e',
+                    'delete_user'     => '#ef4444',
+                    'delete_post'     => '#ef4444',
+                    'change_password' => '#8b5cf6',
+                    'change_role'     => '#06b6d4',
+                    'block_ip'        => '#ef4444',
+                    'unblock_ip'      => '#22c55e',
+                ];
+                foreach ($admin_logs as $log):
+                    $color = $action_colors[$log['action']] ?? '#fff';
+                ?>
+                <tr>
+                    <td style="font-size:0.8rem;white-space:nowrap;color:var(--text-muted)"><?= htmlspecialchars($log['created_at']) ?></td>
+                    <td>
+                        <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($log['admin_username']) ?>" style="color:var(--orange-hi);font-weight:600">
+                            @<?= htmlspecialchars($log['admin_username']) ?>
+                        </a>
+                    </td>
+                    <td><span style="background:<?= $color ?>22;border:1px solid <?= $color ?>55;color:<?= $color ?>;border-radius:6px;padding:0.15rem 0.5rem;font-size:0.78rem;font-weight:700;white-space:nowrap"><?= htmlspecialchars($log['action']) ?></span></td>
+                    <td style="font-size:0.82rem;color:var(--text-sub)">
+                        <?php if ($log['target_type'] && $log['target_id']): ?>
+                            <?= htmlspecialchars($log['target_type']) ?> #<?= $log['target_id'] ?>
+                        <?php elseif ($log['target_type']): ?>
+                            <?= htmlspecialchars($log['target_type']) ?>
+                        <?php else: ?>—<?php endif; ?>
+                    </td>
+                    <td style="font-size:0.82rem;color:var(--text-muted)"><?= htmlspecialchars($log['details'] ?? '') ?></td>
+                    <td><code style="font-size:0.78rem;color:var(--cyan)"><?= htmlspecialchars($log['ip'] ?? '') ?></code></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 </div>
 
 <script>

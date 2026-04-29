@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   last_name VARCHAR(100) DEFAULT '',
   bio TEXT,
   profile_picture VARCHAR(255) DEFAULT 'default_avatar.png',
-  role ENUM('user','admin') NOT NULL DEFAULT 'user',
+  role ENUM('user','admin','superadmin') NOT NULL DEFAULT 'user',
   is_banned TINYINT(1) NOT NULL DEFAULT 0,
   created_at VARCHAR(32) NOT NULL,
   updated_at VARCHAR(32) NOT NULL
@@ -113,4 +113,18 @@ CREATE TABLE IF NOT EXISTS blocked_ips (
   blocked_by INT DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX (ip)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS admin_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+  admin_username VARCHAR(100) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(50) DEFAULT NULL,
+  target_id INT DEFAULT NULL,
+  details TEXT DEFAULT NULL,
+  ip VARCHAR(45) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX (admin_id),
+  INDEX (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

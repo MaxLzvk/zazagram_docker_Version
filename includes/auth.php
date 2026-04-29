@@ -32,15 +32,35 @@ function require_login(): void {
 }
 
 /**
- * Require the user to be an admin.
+ * Require the user to be an admin or superadmin.
  */
 function require_admin(): void {
     require_login();
     $user = get_current_user_data();
-    if (!$user || $user['role'] !== 'admin') {
+    if (!$user || !in_array($user['role'], ['admin', 'superadmin'])) {
         header('Location: ' . BASE_URL . '/pages/feed.php');
         exit;
     }
+}
+
+/**
+ * Require the user to be a superadmin.
+ */
+function require_superadmin(): void {
+    require_login();
+    $user = get_current_user_data();
+    if (!$user || $user['role'] !== 'superadmin') {
+        header('Location: ' . BASE_URL . '/pages/feed.php');
+        exit;
+    }
+}
+
+/**
+ * Check if current user is superadmin.
+ */
+function is_superadmin(): bool {
+    $user = get_current_user_data();
+    return $user && $user['role'] === 'superadmin';
 }
 
 /**

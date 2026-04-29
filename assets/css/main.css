@@ -1991,8 +1991,9 @@ body.login-page .demo-btn:hover {
 .admin-table tr.row-banned td { background: rgba(232,67,67,.04); color: var(--text-muted); }
 .action-btns { display: flex; gap: 0.35rem; flex-wrap: wrap; }
 .role-badge { padding: 0.12rem 0.5rem; border-radius: var(--r-full); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-.role-admin { background: rgba(232,98,10,.12); color: var(--orange); }
-.role-user  { background: rgba(34,197,94,.1);  color: var(--green); }
+.role-admin       { background: rgba(232,98,10,.12); color: var(--orange); }
+.role-user        { background: rgba(34,197,94,.1);  color: var(--green); }
+.role-superadmin  { background: linear-gradient(90deg,rgba(245,158,11,.2),rgba(139,92,246,.2)); color: #f59e0b; border: 1px solid rgba(245,158,11,.35); }
 
 /* ── Utilities ── */
 .muted { color: var(--text-muted); font-size: 0.85rem; }
