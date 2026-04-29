@@ -58,9 +58,7 @@
 html { font-size: 16px; scroll-behavior: smooth; }
 body {
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: radial-gradient(circle at top, rgba(232,98,10,.12), transparent 18%),
-                radial-gradient(circle at bottom right, rgba(212,160,23,.14), transparent 22%),
-                #050505;
+    background: #050505;
     color: var(--text);
     min-height: 100vh;
     padding-top: var(--nav-h);
@@ -70,6 +68,53 @@ body {
     overflow-x: hidden;
     font-size: 1rem;
 }
+
+/* ── Animated background canvas ── */
+#bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ── Animated ambient orbs behind content ── */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+    animation: orbDrift 18s ease-in-out infinite alternate;
+}
+body::before {
+    width: 520px; height: 520px;
+    top: -120px; left: -80px;
+    background: radial-gradient(circle, rgba(232,98,10,.18) 0%, transparent 70%);
+    animation-duration: 20s;
+}
+body::after {
+    width: 420px; height: 420px;
+    bottom: -100px; right: -60px;
+    background: radial-gradient(circle, rgba(212,160,23,.15) 0%, transparent 70%);
+    animation-duration: 26s;
+    animation-delay: -8s;
+}
+@keyframes orbDrift {
+    0%   { transform: translate(0, 0) scale(1); }
+    33%  { transform: translate(40px, 30px) scale(1.08); }
+    66%  { transform: translate(-20px, 50px) scale(0.95); }
+    100% { transform: translate(30px, -20px) scale(1.05); }
+}
+
+/* everything above the canvas */
+.navbar, .feed-layout, .container, .main-content,
+.auth-wrap, .profile-page, .messages-wrap {
+    position: relative;
+    z-index: 1;
+}
+
 body.no-nav {
     padding-top: 0;
 }
@@ -993,14 +1038,134 @@ body.login-page .demo-btn:hover {
 }
 .quick-post-input:hover { border-color: var(--orange); color: #fff; background: rgba(232,98,10,.08); }
 
-/* ── Post Cards ── */
+/* ── Reveal animations (triggered via JS IntersectionObserver) ── */
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.55s cubic-bezier(.22,.68,0,1.1), transform 0.55s cubic-bezier(.22,.68,0,1.1);
+}
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* stagger delay helpers */
+.reveal-d1 { transition-delay: 0.06s; }
+.reveal-d2 { transition-delay: 0.13s; }
+.reveal-d3 { transition-delay: 0.20s; }
+.reveal-d4 { transition-delay: 0.27s; }
+
+/* ── Post card hover lift + glow ── */
 .post-card {
     padding: 0;
     overflow: hidden;
     border-radius: var(--r-lg);
-    border: 1px solid rgba(255,255,255,.08);
-    background: rgba(14,14,14,.95);
+    border: 1px solid rgba(255,255,255,.07);
+    background: rgba(14,14,14,.96);
+    transition: transform 0.22s cubic-bezier(.22,.68,0,1.2),
+                box-shadow 0.22s ease,
+                border-color 0.22s ease;
 }
+.post-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(232,98,10,.22);
+    box-shadow: 0 12px 48px rgba(0,0,0,.55), 0 0 0 1px rgba(232,98,10,.08) inset;
+}
+
+/* ── Navbar shimmer line ── */
+.navbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(232,98,10,.6) 30%,
+        rgba(212,160,23,.8) 50%,
+        rgba(232,98,10,.6) 70%,
+        transparent 100%);
+    background-size: 200% 100%;
+    animation: navShimmer 4s linear infinite;
+}
+@keyframes navShimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ── Floating particle dots (CSS-only fallback) ── */
+@keyframes floatUp {
+    0%   { transform: translateY(0)   scale(1);    opacity: 0; }
+    10%  { opacity: .6; }
+    90%  { opacity: .2; }
+    100% { transform: translateY(-80vh) scale(.4); opacity: 0; }
+}
+
+/* ── Page entrance fade ── */
+@keyframes pageFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.feed-layout,
+.container,
+.profile-page,
+.auth-wrap {
+    animation: pageFade 0.5s cubic-bezier(.22,.68,0,1.1) both;
+}
+
+/* ── Quick post pulse ring ── */
+.quick-post-input:focus {
+    animation: pulseRing 1.6s ease-out infinite;
+}
+@keyframes pulseRing {
+    0%   { box-shadow: 0 0 0 0 rgba(232,98,10,.4); }
+    70%  { box-shadow: 0 0 0 8px rgba(232,98,10,0); }
+    100% { box-shadow: 0 0 0 0 rgba(232,98,10,0); }
+}
+
+/* ── Sidebar card entrance ── */
+.feed-sidebar .card,
+.left-sidebar .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.feed-sidebar .card:hover,
+.left-sidebar .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+
+/* ── Like button pop animation ── */
+@keyframes likePop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.35); }
+    70%  { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+.like-btn.pop {
+    animation: likePop 0.38s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* ── Skeleton pulse (for future lazy loads) ── */
+@keyframes skeletonPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
+}
+.skeleton {
+    background: rgba(255,255,255,.06);
+    border-radius: var(--r-sm);
+    animation: skeletonPulse 1.6s ease-in-out infinite;
+}
+
+/* ── Notification badge pulse ── */
+.badge {
+    animation: badgePop 0.3s cubic-bezier(.34,1.56,.64,1) both,
+               badgePulse 2.5s 0.5s ease-in-out infinite;
+}
+@keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(232,98,10,.6); }
+    50%       { box-shadow: 0 0 16px rgba(232,98,10,1); }
+}
+
+
 .post-header { display: flex; align-items: center; gap: 0.85rem; padding: 1.1rem 1.2rem; position: relative; }
 .post-author-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,.12); }
 .post-author-info { flex: 1; }
