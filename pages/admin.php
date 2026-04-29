@@ -216,11 +216,11 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Tabs -->
     <div class="admin-tabs">
-        <button class="tab-btn active" onclick="showTab('users')">Users</button>
-        <button class="tab-btn" onclick="showTab('posts')">Posts</button>
-        <button class="tab-btn" onclick="showTab('visitors')">🌐 Visitor IPs</button>
+        <button class="tab-btn active" onclick="showTab('users',this)">Users</button>
+        <button class="tab-btn" onclick="showTab('posts',this)">Posts</button>
+        <button class="tab-btn" onclick="showTab('visitors',this)">🌐 Visitor IPs</button>
         <?php if (is_superadmin()): ?>
-        <button class="tab-btn" onclick="showTab('superadmin')" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(139,92,246,.15));border-color:rgba(245,158,11,.4);color:#f59e0b">⭐ Super Admin</button>
+        <button class="tab-btn" onclick="showTab('superadmin',this)" style="background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(139,92,246,.15));border-color:rgba(245,158,11,.4);color:#f59e0b">⭐ Super Admin</button>
         <?php endif; ?>
     </div>
 
@@ -503,11 +503,11 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-function showTab(name) {
+function showTab(name, btn) {
     document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + name).style.display = 'block';
-    event.target.classList.add('active');
+    if (btn) btn.classList.add('active');
     if (name === 'visitors') loadGeoData();
 }
 function togglePwForm(uid) {
