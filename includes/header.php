@@ -5,8 +5,28 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/../includes/db.php';
 
 $current_user = get_current_user_data();
+
+// ── Log visitor IP ──
+try {
+    $vis_ip = $_SERVER['HTTP_X_FORWARDED_FOR']
+        ?? $_SERVER['HTTP_X_REAL_IP']
+        ?? $_SERVER['REMOTE_ADDR']
+        ?? 'unknown';
+    $vis_ip   = trim(explode(',', $vis_ip)[0]);
+    $vis_page = substr(($_SERVER['REQUEST_URI'] ?? '/'), 0, 512);
+    $vis_ua   = substr(($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 512);
+    $vis_uid  = $current_user['id'] ?? null;
+    $vis_user = $current_user['username'] ?? null;
+    $pdo = db();
+    $stmt = $pdo->prepare(
+        'INSERT INTO visitor_logs (ip, user_id, username, page, user_agent, visited_at)
+         VALUES (?, ?, ?, ?, ?, NOW())'
+    );
+    $stmt->execute([$vis_ip, $vis_uid, $vis_user, $vis_page, $vis_ua]);
+} catch (Throwable $e) { /* silent fail */ }
 $notif_count  = $current_user ? unread_notification_count($current_user['id']) : 0;
 $msg_count    = $current_user ? unread_message_count($current_user['id']) : 0;
 

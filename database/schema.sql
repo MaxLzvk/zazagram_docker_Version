@@ -92,3 +92,16 @@ CREATE TABLE IF NOT EXISTS notifications (
   CONSTRAINT notifications_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT notifications_actor_fk FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS visitor_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ip VARCHAR(45) NOT NULL,
+  user_id INT DEFAULT NULL,
+  username VARCHAR(100) DEFAULT NULL,
+  page VARCHAR(512) NOT NULL,
+  user_agent TEXT,
+  visited_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX (ip),
+  INDEX (visited_at),
+  INDEX (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

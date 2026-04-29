@@ -130,6 +130,7 @@ include __DIR__ . '/../includes/header.php';
     <div class="admin-tabs">
         <button class="tab-btn active" onclick="showTab('users')">Users</button>
         <button class="tab-btn" onclick="showTab('posts')">Posts</button>
+        <button class="tab-btn" onclick="showTab('visitors')">🌐 Visitor IPs</button>
     </div>
 
     <!-- Users tab -->
@@ -204,6 +205,79 @@ include __DIR__ . '/../includes/header.php';
                         </td>
                     </tr>
                 <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <!-- Visitors tab -->
+    <div id="tab-visitors" class="tab-content card" style="display:none">
+        <h3>🌐 Visitor IP Logs <small style="font-weight:400;font-size:0.8rem;color:var(--text-muted)">(last 200 visits)</small></h3>
+        <?php
+        try {
+            $pdo = db();
+            $vis_rows = $pdo->query(
+                'SELECT ip, user_id, username, page, user_agent, visited_at
+                 FROM visitor_logs
+                 ORDER BY visited_at DESC
+                 LIMIT 200'
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            // Unique IPs summary
+            $ip_counts = [];
+            foreach ($vis_rows as $r) {
+                $ip_counts[$r['ip']] = ($ip_counts[$r['ip']] ?? 0) + 1;
+            }
+            arsort($ip_counts);
+        } catch (Throwable $e) {
+            $vis_rows = [];
+            $ip_counts = [];
+        }
+        ?>
+
+        <!-- IP Summary cards -->
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.2rem">
+            <?php foreach (array_slice($ip_counts, 0, 20, true) as $ip => $cnt): ?>
+                <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:8px;padding:0.4rem 0.8rem;font-size:0.82rem">
+                    <span style="color:var(--orange-hi);font-weight:700"><?= htmlspecialchars($ip) ?></span>
+                    <span style="color:var(--text-muted)"> &times;<?= $cnt ?></span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>User</th>
+                    <th>Page</th>
+                    <th>Browser / UA</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($vis_rows as $r): ?>
+                <tr>
+                    <td><code style="color:var(--orange-hi)"><?= htmlspecialchars($r['ip']) ?></code></td>
+                    <td>
+                        <?php if ($r['username']): ?>
+                            <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($r['username']) ?>">
+                                <?= htmlspecialchars($r['username']) ?>
+                            </a>
+                        <?php else: ?>
+                            <span style="color:var(--text-muted)">Guest</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.82rem;color:var(--text-sub)">
+                        <?= htmlspecialchars($r['page']) ?>
+                    </td>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.75rem;color:var(--text-muted)">
+                        <?= htmlspecialchars($r['user_agent'] ?? '') ?>
+                    </td>
+                    <td style="font-size:0.82rem;white-space:nowrap"><?= htmlspecialchars($r['visited_at']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+                <?php if (!$vis_rows): ?>
+                    <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No visits logged yet.</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
