@@ -23,6 +23,41 @@ foreach ($friends as $f) {
 $friend_ids[] = $me['id']; // include own posts
 $friend_count = count(array_filter($friend_ids, fn($id) => $id !== $me['id']));
 
+// ── Right sidebar data ───────────────────────────────────
+// Trending: top 4 most-liked posts
+$like_counts = [];
+foreach ($all_likes as $lk) {
+    $like_counts[$lk['post_id']] = ($like_counts[$lk['post_id']] ?? 0) + 1;
+}
+arsort($like_counts);
+$trending_posts = [];
+foreach (array_slice(array_keys($like_counts), 0, 4) as $pid) {
+    foreach ($all_posts as $p) {
+        if ($p['id'] == $pid) { $trending_posts[] = ['post' => $p, 'likes' => $like_counts[$pid]]; break; }
+    }
+}
+
+// Recently active users (last 5 who posted, excluding me)
+$active_users = [];
+$seen_active  = [];
+foreach ($all_posts as $p) {
+    if ($p['user_id'] == $me['id']) continue;
+    if (in_array($p['user_id'], $seen_active)) continue;
+    $u = null;
+    foreach ($all_users as $usr) { if ($usr['id'] == $p['user_id']) { $u = $usr; break; } }
+    if ($u && !$u['is_banned']) {
+        $active_users[] = ['user' => $u, 'last_post' => $p['created_at']];
+        $seen_active[]  = $p['user_id'];
+        if (count($active_users) >= 5) break;
+    }
+}
+
+// Platform stats
+$total_posts  = count($all_posts);
+$total_likes  = count($all_likes);
+$total_users  = count(array_filter($all_users, fn($u) => !$u['is_banned']));
+$total_comments = count($all_comments);
+
 // Show all posts
 $feed_posts = $all_posts;
 // Sort newest first
@@ -38,6 +73,16 @@ function get_user_safe(array $all_users, int $id): ?array {
 
 $page_title = 'Feed';
 $extra_js   = ['posts.js'];
+
+function time_ago(string $timestamp): string {
+    $diff = time() - strtotime($timestamp);
+    if ($diff < 60) return 'just now';
+    if ($diff < 3600) return floor($diff / 60) . 'm ago';
+    if ($diff < 86400) return floor($diff / 3600) . 'h ago';
+    if ($diff < 604800) return floor($diff / 86400) . 'd ago';
+    return date('M j, Y', strtotime($timestamp));
+}
+
 include __DIR__ . '/../includes/header.php';
 ?>
 
@@ -225,19 +270,91 @@ include __DIR__ . '/../includes/header.php';
         </div><!-- /#feed-posts -->
     </div>
 
+    <!-- Right sidebar -->
+    <aside class="feed-sidebar">
+
+        <!-- 🔥 Trending Posts -->
+        <div class="card rs-card">
+            <h3><span class="rs-icon">🔥</span> Trending</h3>
+            <?php if (empty($trending_posts)): ?>
+                <p class="muted-sm">No trending posts yet.</p>
+            <?php else: ?>
+                <?php foreach ($trending_posts as $t):
+                    $ta = get_user_safe($all_users, $t['post']['user_id']);
+                    if (!$ta) continue;
+                ?>
+                <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($ta['username']) ?>"
+                   class="trending-item">
+                    <?php if ($t['post']['image']): ?>
+                        <div class="trending-thumb">
+                            <img src="<?= BASE_URL ?>/uploads/<?= htmlspecialchars($t['post']['image']) ?>"
+                                 alt="" class="filter-<?= htmlspecialchars($t['post']['filter']) ?>">
+                        </div>
+                    <?php else: ?>
+                        <div class="trending-thumb trending-thumb-text">
+                            <span><?= mb_substr(htmlspecialchars($t['post']['caption'] ?? '✦'), 0, 2) ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <div class="trending-info">
+                        <span class="trending-user">@<?= htmlspecialchars($ta['username']) ?></span>
+                        <span class="trending-caption"><?= htmlspecialchars(mb_substr($t['post']['caption'] ?? '', 0, 40)) ?><?= strlen($t['post']['caption'] ?? '') > 40 ? '…' : '' ?></span>
+                        <span class="trending-likes">♥ <?= $t['likes'] ?></span>
+                    </div>
+                </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- 👥 Recently Active -->
+        <div class="card rs-card">
+            <h3><span class="rs-icon">👥</span> Recently Active</h3>
+            <?php if (empty($active_users)): ?>
+                <p class="muted-sm">No activity yet.</p>
+            <?php else: ?>
+                <?php foreach ($active_users as $au): ?>
+                <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($au['user']['username']) ?>"
+                   class="active-user-item">
+                    <div class="active-avatar-wrap">
+                        <img src="<?= BASE_URL ?>/uploads/<?= htmlspecialchars($au['user']['profile_picture']) ?>?v=<?= strtotime($au['user']['updated_at']) ?>"
+                             class="active-avatar"
+                             onerror="this.onerror=null;this.src='<?= BASE_URL ?>/assets/images/default_avatar.png'">
+                        <span class="active-dot"></span>
+                    </div>
+                    <div>
+                        <span class="active-name">@<?= htmlspecialchars($au['user']['username']) ?></span>
+                        <span class="active-time"><?= time_ago($au['last_post']) ?></span>
+                    </div>
+                </a>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+
+        <!-- 📊 Platform Stats -->
+        <div class="card rs-card rs-stats">
+            <h3><span class="rs-icon">📊</span> Zazagram</h3>
+            <div class="rs-stat-grid">
+                <div class="rs-stat">
+                    <span class="rs-stat-num"><?= $total_users ?></span>
+                    <span class="rs-stat-lbl">Members</span>
+                </div>
+                <div class="rs-stat">
+                    <span class="rs-stat-num"><?= $total_posts ?></span>
+                    <span class="rs-stat-lbl">Posts</span>
+                </div>
+                <div class="rs-stat">
+                    <span class="rs-stat-num"><?= $total_likes ?></span>
+                    <span class="rs-stat-lbl">Likes</span>
+                </div>
+                <div class="rs-stat">
+                    <span class="rs-stat-num"><?= $total_comments ?></span>
+                    <span class="rs-stat-lbl">Comments</span>
+                </div>
+            </div>
+        </div>
+
+    </aside>
+
 </div>
-
-<?php
-
-function time_ago(string $timestamp): string {
-    $diff = time() - strtotime($timestamp);
-    if ($diff < 60) return 'just now';
-    if ($diff < 3600) return floor($diff / 60) . 'm ago';
-    if ($diff < 86400) return floor($diff / 3600) . 'h ago';
-    if ($diff < 604800) return floor($diff / 86400) . 'd ago';
-    return date('M j, Y', strtotime($timestamp));
-}
-?>
 
 <script>
 const FEED_LAST_POST_ID = <?= empty($all_posts) ? 0 : max(array_column($all_posts, 'id')) ?>;
