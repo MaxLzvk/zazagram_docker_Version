@@ -36,7 +36,7 @@
     --blue:         #3b82f6;
     --yellow:       #f59e0b;
 
-    --nav-h:        56px;
+    --nav-h:        60px;
     --r-xs:         4px;
     --r-sm:         8px;
     --r:            12px;
@@ -55,18 +55,20 @@
 
 /* ── Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14.5px; scroll-behavior: smooth; }
+html { font-size: 16px; scroll-behavior: smooth; }
 body {
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: radial-gradient(circle at top, rgba(232,98,10,.12), transparent 18%),
                 radial-gradient(circle at bottom right, rgba(212,160,23,.14), transparent 22%),
                 #050505;
     color: var(--text);
     min-height: 100vh;
     padding-top: var(--nav-h);
-    line-height: 1.6;
+    line-height: 1.65;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    font-size: 1rem;
 }
 body.no-nav {
     padding-top: 0;
@@ -305,9 +307,9 @@ button, input, textarea, select { font-family: inherit; font-size: inherit; }
     display: inline-flex;
     align-items: center;
     gap: 0.28rem;
-    padding: 0.38rem 0.92rem;
+    padding: 0.42rem 1rem;
     border-radius: var(--r-full);
-    font-size: 0.84rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: rgba(255,255,255,.65);
     letter-spacing: 0.01em;
@@ -933,35 +935,36 @@ body.login-page .demo-btn:hover {
 
 .feed-sidebar .card h3,
 .left-sidebar .card h3 {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--text-muted);
-    margin-bottom: 0.75rem;
-    font-weight: 700;
+    margin-bottom: 0.8rem;
+    font-weight: 800;
 }
 
-.sidebar-me { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem; }
-.sidebar-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid var(--border-hi); }
-.sidebar-me strong { font-size: 0.88rem; display: block; }
-.sidebar-me p { font-size: 0.75rem; color: var(--text-muted); }
+.sidebar-me { display: flex; align-items: center; gap: 0.8rem; padding: 1rem; }
+.sidebar-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--border-hi); }
+.sidebar-me strong { font-size: 0.97rem; display: block; font-weight: 700; }
+.sidebar-me p { font-size: 0.82rem; color: var(--text-muted); }
 
-.suggestion-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px solid var(--border); }
+.suggestion-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
 .suggestion-item:last-of-type { border-bottom: none; }
-.suggestion-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.suggestion-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .suggestion-item > div { flex: 1; min-width: 0; }
-.suggestion-item a { font-size: 0.83rem; font-weight: 600; display: block; }
+.suggestion-item a { font-size: 0.92rem; font-weight: 600; display: block; }
 .suggestion-item a:hover { color: var(--orange); }
-.suggestion-item p { font-size: 0.73rem; color: var(--text-muted); }
+.suggestion-item p { font-size: 0.8rem; color: var(--text-muted); }
 
 .left-nav-item {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.55rem 0.75rem;
+    gap: 0.65rem;
+    padding: 0.6rem 0.8rem;
     border-radius: var(--r-sm);
     color: var(--text-sub);
-    font-size: 0.88rem;
+    font-size: 0.97rem;
+    font-weight: 500;
     transition: background var(--ease), color var(--ease);
     margin-bottom: 0.1rem;
 }
@@ -979,12 +982,12 @@ body.login-page .demo-btn:hover {
 }
 .quick-post-input {
     flex: 1;
-    padding: 0.68rem 1rem;
+    padding: 0.72rem 1.1rem;
     border: 1px solid rgba(255,255,255,.12);
     border-radius: var(--r-full);
     background: rgba(255,255,255,.03);
     color: var(--text-sub);
-    font-size: 0.9rem;
+    font-size: 0.97rem;
     cursor: pointer;
     transition: border-color var(--ease), color var(--ease), background var(--ease);
 }
@@ -998,12 +1001,12 @@ body.login-page .demo-btn:hover {
     border: 1px solid rgba(255,255,255,.08);
     background: rgba(14,14,14,.95);
 }
-.post-header { display: flex; align-items: center; gap: 0.8rem; padding: 1rem 1.1rem; position: relative; }
-.post-author-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,.12); }
+.post-header { display: flex; align-items: center; gap: 0.85rem; padding: 1.1rem 1.2rem; position: relative; }
+.post-author-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid rgba(255,255,255,.12); }
 .post-author-info { flex: 1; }
-.post-author-info strong { font-size: 0.92rem; font-weight: 700; display: block; color: #f9f9f9; }
+.post-author-info strong { font-size: 1rem; font-weight: 700; display: block; color: #f9f9f9; }
 .post-author-info strong:hover { color: var(--orange); }
-.post-time { font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.1rem; }
+.post-time { font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.1rem; }
 .post-menu { position: relative; margin-left: auto; }
 .post-menu-btn {
     background: rgba(255,255,255,.04); border: none; cursor: pointer;
@@ -1034,9 +1037,9 @@ body.login-page .demo-btn:hover {
 
 .post-image-wrap { background: #000; }
 .post-image { width: 100%; max-height: 520px; object-fit: cover; display: block; }
-.post-body { padding: 0.8rem 1rem 1rem; }
-.post-caption { font-size: 0.875rem; line-height: 1.55; margin-bottom: 0.7rem; }
-.post-caption strong { font-weight: 700; margin-right: 0.3rem; }
+.post-body { padding: 0.9rem 1.2rem 1.1rem; }
+.post-caption { font-size: 1rem; line-height: 1.65; margin-bottom: 0.75rem; color: var(--text); }
+.post-caption strong { font-weight: 700; margin-right: 0.35rem; font-size: 1rem; }
 .post-caption strong:hover { color: var(--orange); }
 
 .post-actions {
@@ -1051,10 +1054,10 @@ body.login-page .demo-btn:hover {
     background: rgba(255,255,255,.03);
     border: none; cursor: pointer;
     display: inline-flex; align-items: center; gap: 0.35rem;
-    padding: 0.55rem 0.85rem;
+    padding: 0.55rem 0.95rem;
     border-radius: var(--r-full);
     color: var(--text-sub);
-    font-size: 0.86rem;
+    font-size: 0.95rem;
     font-weight: 700;
     transition: background var(--ease), color var(--ease), transform var(--ease);
 }
@@ -1064,7 +1067,7 @@ body.login-page .demo-btn:hover {
 .comment-icon { font-size: 1rem; line-height: 1; }
 
 .comments-section { padding-top: 0.4rem; }
-.comment { font-size: 0.88rem; margin-bottom: 0.55rem; color: var(--text-sub); }
+.comment { font-size: 0.95rem; margin-bottom: 0.6rem; color: var(--text-sub); line-height: 1.55; }
 .comment a { font-weight: 700; color: var(--text); margin-right: 0.25rem; }
 .comment a:hover { color: var(--orange); }
 .comment-form {
@@ -1081,10 +1084,10 @@ body.login-page .demo-btn:hover {
     background: rgba(255,255,255,.03);
     border: 1px solid rgba(255,255,255,.12);
     border-radius: var(--r-full);
-    padding: 0.55rem 1rem;
+    padding: 0.58rem 1.1rem;
     color: var(--text);
     outline: none;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     transition: border var(--ease), background var(--ease);
 }
 .comment-input:focus { border-color: rgba(232,98,10,.9); background: rgba(255,255,255,.05); }
