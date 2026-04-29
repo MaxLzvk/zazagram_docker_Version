@@ -1234,12 +1234,195 @@ body.login-page .demo-btn:hover {
 
 .post-actions {
     display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 0.8rem 0 0;
-    border-top: 1px solid rgba(255,255,255,.08);
-    margin-bottom: 0.75rem;
+    align-items: stretch;
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding: 0.15rem 0.4rem;
+    gap: 0;
 }
+
+/* ── Reaction summary row ── */
+.react-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.2rem 0.3rem;
+    border-top: 1px solid rgba(255,255,255,.06);
+}
+.react-emojis {
+    display: flex;
+    align-items: center;
+}
+.react-bubble {
+    font-size: 0.88rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: rgba(30,30,30,1);
+    border: 2px solid rgba(10,10,10,.9);
+    margin-left: -5px;
+    transition: transform 0.15s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,.5);
+}
+.react-bubble:first-child { margin-left: 0; }
+.react-emojis:hover .react-bubble { transform: scale(1.2); }
+.react-total {
+    margin-left: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.react-comment-count {
+    background: none;
+    border: none;
+    font-size: 0.83rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s ease;
+    font-family: inherit;
+}
+.react-comment-count:hover { color: var(--text); text-decoration: underline; }
+
+/* ── Action buttons (Like / Comment / Share) ── */
+.action-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    padding: 0.62rem 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: rgba(255,255,255,.45);
+    font-size: 0.88rem;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--r-sm);
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    position: relative;
+    letter-spacing: 0.01em;
+}
+.action-btn + .action-btn {
+    border-left: 1px solid rgba(255,255,255,.05);
+}
+.action-btn:hover {
+    background: rgba(255,255,255,.05);
+    color: rgba(255,255,255,.85);
+}
+.action-icon {
+    font-size: 1.05rem;
+    line-height: 1;
+    display: inline-flex;
+    transition: transform 0.2s cubic-bezier(.34,1.56,.64,1);
+}
+.action-btn:hover .action-icon { transform: scale(1.15); }
+.action-label { font-size: 0.86rem; }
+
+/* liked / reacted states */
+.action-btn.reacted         { color: var(--orange);  font-weight: 700; }
+.action-btn.reacted-love    { color: #e84343; font-weight: 700; }
+.action-btn.reacted-haha    { color: #f59e0b; font-weight: 700; }
+.action-btn.reacted-wow     { color: #f59e0b; font-weight: 700; }
+.action-btn.reacted-sad     { color: #3b82f6; font-weight: 700; }
+.action-btn.reacted-angry   { color: #e84343; font-weight: 700; }
+.action-btn.reacted:hover   { background: rgba(232,98,10,.07); }
+
+/* ── Reaction picker popup ── */
+.reaction-wrap {
+    flex: 1;
+    position: relative;
+}
+
+/* picker hidden by default, shown only via .open class set by JS */
+.reaction-picker {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.85) translateY(6px);
+    background: rgba(18,18,18,.99);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 999px;
+    padding: 0.5rem 0.7rem;
+    gap: 0.05rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,.85), 0 0 0 1px rgba(232,98,10,.08) inset;
+    z-index: 200;
+    flex-direction: row;
+    align-items: center;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.34,1.56,.64,1);
+}
+.reaction-picker.open {
+    display: flex;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) scale(1) translateY(0);
+    animation: pickerPop 0.22s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes pickerPop {
+    from { opacity: 0; transform: translateX(-50%) scale(0.6) translateY(10px); }
+    to   { opacity: 1; transform: translateX(-50%) scale(1)   translateY(0); }
+}
+
+/* little arrow pointer */
+.reaction-picker::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 28%;
+    width: 10px; height: 10px;
+    background: rgba(18,18,18,.99);
+    border-right: 1px solid rgba(255,255,255,.1);
+    border-bottom: 1px solid rgba(255,255,255,.1);
+    transform: rotate(45deg);
+}
+
+.react-pick-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.65rem;
+    line-height: 1;
+    padding: 0.22rem 0.2rem;
+    border-radius: 50%;
+    transition: transform 0.18s cubic-bezier(.34,1.56,.64,1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.react-pick-btn::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.68rem;
+    font-family: inherit;
+    background: rgba(0,0,0,.85);
+    color: #fff;
+    padding: 0.2rem 0.45rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}
+.react-pick-btn:hover {
+    transform: scale(1.5) translateY(-5px);
+}
+.react-pick-btn:hover::after {
+    opacity: 1;
+}
+
+/* old like/comment btn — kept for non-feed pages */
 .like-btn, .comment-toggle-btn {
     background: rgba(255,255,255,.03);
     border: none; cursor: pointer;
@@ -1282,6 +1465,30 @@ body.login-page .demo-btn:hover {
 }
 .comment-input:focus { border-color: rgba(232,98,10,.9); background: rgba(255,255,255,.05); }
 .comment-input::placeholder { color: var(--text-muted); }
+
+/* ── Toast notification ── */
+.toast-msg {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(20,20,20,.97);
+    border: 1px solid rgba(232,98,10,.3);
+    color: var(--text);
+    padding: 0.65rem 1.4rem;
+    border-radius: var(--r-full);
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+.toast-msg.toast-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
 
 /* ── Right Sidebar ── */
 .rs-card {

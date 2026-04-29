@@ -226,16 +226,52 @@ include __DIR__ . '/../includes/header.php';
                     <?php endif; ?>
 
                     <!-- Actions -->
+                    <?php
+                        $total_likes    = count($post_likes);
+                        $total_comments = count($post_comments);
+                        $liked          = (bool) db_find_one($post_likes, 'user_id', $me['id']);
+                    ?>
+
+                    <!-- Summary row -->
+                    <?php if ($total_likes > 0 || $total_comments > 0): ?>
+                    <div class="react-summary">
+                        <?php if ($total_likes > 0): ?>
+                        <div class="react-emojis">
+                            <span class="react-bubble">👍</span>
+                            <span class="react-total"><?= $total_likes ?></span>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($total_comments > 0): ?>
+                        <button class="react-comment-count" onclick="toggleComments(<?= $post['id'] ?>)">
+                            <?= $total_comments ?> comment<?= $total_comments !== 1 ? 's' : '' ?>
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Action buttons row -->
                     <div class="post-actions">
-                        <button class="like-btn <?= $liked ? 'liked' : '' ?>"
-                                onclick="toggleLike(<?= $post['id'] ?>, this)">
-                            <span class="like-icon">♥</span>
-                            <span class="like-count"><?= count($post_likes) ?></span>
+
+                        <!-- Like -->
+                        <button class="action-btn like-btn <?= $liked ? 'reacted' : '' ?>"
+                                id="likebtn-<?= $post['id'] ?>"
+                                onclick="toggleLikeSimple(<?= $post['id'] ?>)">
+                            <span class="action-icon" id="like-icon-<?= $post['id'] ?>"><?= $liked ? '👍' : '👍' ?></span>
+                            <span class="action-label" id="like-label-<?= $post['id'] ?>"><?= $liked ? 'Liked' : 'Like' ?></span>
                         </button>
-                        <button class="comment-toggle-btn"
-                                onclick="toggleComments(<?= $post['id'] ?>)">
-                            <span><?= count($post_comments) ?></span>
+
+                        <!-- Comment -->
+                        <button class="action-btn comment-toggle-btn" onclick="toggleComments(<?= $post['id'] ?>)">
+                            <span class="action-icon">💬</span>
+                            <span class="action-label">Comment</span>
                         </button>
+
+                        <!-- Share -->
+                        <button class="action-btn share-btn" onclick="sharePost(<?= $post['id'] ?>)">
+                            <span class="action-icon">↗</span>
+                            <span class="action-label">Share</span>
+                        </button>
+
                     </div>
 
                     <!-- Comments -->
@@ -362,6 +398,49 @@ const MY_USER_ID        = <?= $me['id'] ?>;
 const MY_AVATAR         = '<?= addslashes($me['profile_picture']) ?>';
 const MY_AVATAR_VER     = <?= strtotime($me['updated_at']) ?: 0 ?>;
 const IS_ADMIN          = <?= $me['role'] === 'admin' ? 'true' : 'false' ?>;
+
+function toggleLikeSimple(postId) {
+    const btn   = document.getElementById('likebtn-' + postId);
+    const icon  = document.getElementById('like-icon-' + postId);
+    const label = document.getElementById('like-label-' + postId);
+    const liked = btn.classList.contains('reacted');
+
+    fetch('<?= BASE_URL ?>/api/toggle_like.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ post_id: postId, reaction: 'like', toggle_off: liked })
+    }).then(r => r.json()).then(d => {
+        if (!d.success) return;
+        btn.classList.toggle('reacted', !liked);
+        label.textContent = liked ? 'Like' : 'Liked';
+        // pop animation
+        btn.classList.remove('pop');
+        void btn.offsetWidth;
+        btn.classList.add('pop');
+        btn.addEventListener('animationend', () => btn.classList.remove('pop'), {once: true});
+    });
+}
+
+function sharePost(postId) {
+    const url = window.location.origin + window.location.pathname + '?post=' + postId;
+    if (navigator.share) {
+        navigator.share({ title: 'Zazagram post', url });
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Link copied to clipboard!');
+        });
+    }
+}
+
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast-msg';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.classList.add('toast-show'); }, 10);
+    setTimeout(() => { t.classList.remove('toast-show'); setTimeout(() => t.remove(), 400); }, 2800);
+}
+
 function sendFriendRequest(userId, btn) {
     fetch('<?= BASE_URL ?>/api/friend_request.php', {
         method: 'POST',
@@ -376,8 +455,6 @@ function togglePostMenu(id) {
     const el = document.getElementById('pdrop-' + id);
     el.style.display = el.style.display === 'block' ? 'none' : 'block';
 }
-
-// Ferme le dropdown quand on clique ailleurs
 document.addEventListener('click', function(e) {
     if (!e.target.closest('.post-menu')) {
         document.querySelectorAll('.post-dropdown').forEach(function(el) {

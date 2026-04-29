@@ -6,7 +6,11 @@ require_login();
 
 $me   = get_current_user_data();
 $data = json_decode(file_get_contents('php://input'), true);
-$post_id = (int)($data['post_id'] ?? 0);
+$post_id    = (int)($data['post_id'] ?? 0);
+$reaction   = preg_replace('/[^a-z]/', '', strtolower($data['reaction'] ?? 'like'));
+$toggle_off = !empty($data['toggle_off']);
+$allowed    = ['like','love','haha','wow','sad','angry'];
+if (!in_array($reaction, $allowed)) $reaction = 'like';
 
 if (!$post_id) json_response(['success' => false, 'error' => 'Invalid post ID.'], 400);
 
@@ -28,15 +32,22 @@ foreach ($likes as $i => $like) {
 }
 
 if ($existing) {
-    // Unlike
-    array_splice($likes, $existing_i, 1);
-    $liked = false;
+    if ($toggle_off || $existing['reaction'] === $reaction) {
+        // Remove reaction
+        array_splice($likes, $existing_i, 1);
+        $liked = false;
+    } else {
+        // Change reaction
+        $likes[$existing_i]['reaction'] = $reaction;
+        $liked = true;
+    }
 } else {
-    // Like
+    // New reaction
     $likes[] = [
         'id'         => db_next_id($likes),
         'user_id'    => $me['id'],
         'post_id'    => $post_id,
+        'reaction'   => $reaction,
         'created_at' => now(),
     ];
     $liked = true;
