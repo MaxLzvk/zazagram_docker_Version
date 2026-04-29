@@ -329,6 +329,7 @@ include __DIR__ . '/../includes/header.php';
                 <tr>
                     <th>IP Address</th>
                     <th>User</th>
+                    <th>📍 Location</th>
                     <th>Page</th>
                     <th>Browser / UA</th>
                     <th>Time</th>
@@ -338,7 +339,7 @@ include __DIR__ . '/../includes/header.php';
             <tbody>
                 <?php foreach ($vis_rows as $r): ?>
                 <tr>
-                    <td><code style="color:var(--orange-hi)"><?= htmlspecialchars($r['ip']) ?></code></td>
+                    <td><code class="vis-ip" style="color:var(--orange-hi)" data-ip="<?= htmlspecialchars($r['ip']) ?>"><?= htmlspecialchars($r['ip']) ?></code></td>
                     <td>
                         <?php if ($r['username']): ?>
                             <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($r['username']) ?>">
@@ -347,6 +348,9 @@ include __DIR__ . '/../includes/header.php';
                         <?php else: ?>
                             <span style="color:var(--text-muted)">Guest</span>
                         <?php endif; ?>
+                    </td>
+                    <td class="geo-cell" data-ip="<?= htmlspecialchars($r['ip']) ?>" style="font-size:0.8rem;white-space:nowrap;color:var(--text-muted)">
+                        <span style="opacity:.4">Loading…</span>
                     </td>
                     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.82rem;color:var(--text-sub)">
                         <?= htmlspecialchars($r['page']) ?>
@@ -373,7 +377,7 @@ include __DIR__ . '/../includes/header.php';
                     </td>
                 <?php endforeach; ?>
                 <?php if (!$vis_rows): ?>
-                    <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No visits logged yet.</td></tr>
+                    <tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No visits logged yet.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -386,10 +390,64 @@ function showTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + name).style.display = 'block';
     event.target.classList.add('active');
+    if (name === 'visitors') loadGeoData();
 }
 function togglePwForm(uid) {
     const el = document.getElementById('pw-form-' + uid);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+let geoLoaded = false;
+async function loadGeoData() {
+    if (geoLoaded) return;
+    geoLoaded = true;
+
+    // Collect unique IPs
+    const cells = document.querySelectorAll('.geo-cell');
+    const uniqueIPs = [...new Set([...cells].map(c => c.dataset.ip))]
+        .filter(ip => ip && ip !== '127.0.0.1' && ip !== '::1');
+
+    if (!uniqueIPs.length) {
+        cells.forEach(c => c.innerHTML = '<span style="color:var(--text-muted)">local</span>');
+        return;
+    }
+
+    // ip-api.com allows batch up to 100 IPs
+    const geoMap = {};
+    for (let i = 0; i < uniqueIPs.length; i += 100) {
+        const batch = uniqueIPs.slice(i, i + 100).map(ip => ({ query: ip, fields: 'query,country,countryCode,regionName,city,isp,status' }));
+        try {
+            const res = await fetch('http://ip-api.com/batch?fields=query,country,countryCode,regionName,city,isp,status', {
+                method: 'POST',
+                body: JSON.stringify(batch)
+            });
+            const data = await res.json();
+            data.forEach(d => { if (d.status === 'success') geoMap[d.query] = d; });
+        } catch(e) {}
+    }
+
+    // Fill cells
+    cells.forEach(cell => {
+        const ip = cell.dataset.ip;
+        if (ip === '127.0.0.1' || ip === '::1') {
+            cell.innerHTML = '<span style="color:var(--cyan)">🏠 Localhost</span>';
+            return;
+        }
+        const g = geoMap[ip];
+        if (g) {
+            const flag = g.countryCode ? `https://flagcdn.com/16x12/${g.countryCode.toLowerCase()}.png` : '';
+            cell.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:2px">
+                    <span style="color:var(--text);font-weight:600">
+                        ${flag ? `<img src="${flag}" style="vertical-align:middle;margin-right:4px;border-radius:2px">` : '🌐'}
+                        ${g.city || '?'}, ${g.country || '?'}
+                    </span>
+                    <span style="color:var(--text-muted);font-size:0.73rem">${g.isp || ''}</span>
+                </div>`;
+        } else {
+            cell.innerHTML = '<span style="color:var(--text-muted)">—</span>';
+        }
+    });
 }
 </script>
 
