@@ -96,8 +96,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $flash = 'Post deleted.';
         $posts = db_read('posts.json');
+    } elseif ($act === 'block_ip') {
+        $ip_to_block = trim($_POST['ip'] ?? '');
+        $reason      = trim($_POST['reason'] ?? '');
+        if ($ip_to_block) {
+            try {
+                $pdo = db();
+                $pdo->prepare(
+                    'INSERT IGNORE INTO blocked_ips (ip, reason, blocked_by, created_at) VALUES (?, ?, ?, NOW())'
+                )->execute([$ip_to_block, $reason, $me['id']]);
+                $flash = "IP {$ip_to_block} has been blocked.";
+            } catch (Throwable $e) { $flash = 'Error blocking IP.'; }
+        }
+    } elseif ($act === 'unblock_ip') {
+        $ip_to_unblock = trim($_POST['ip'] ?? '');
+        if ($ip_to_unblock) {
+            try {
+                $pdo = db();
+                $pdo->prepare('DELETE FROM blocked_ips WHERE ip = ?')->execute([$ip_to_unblock]);
+                $flash = "IP {$ip_to_unblock} has been unblocked.";
+            } catch (Throwable $e) { $flash = 'Error unblocking IP.'; }
+        }
     }
-}
 
 // Stats
 $total_users   = count($users);
@@ -105,6 +125,16 @@ $banned_users  = count(array_filter($users, fn($u) => $u['is_banned']));
 $total_posts   = count($posts);
 $total_likes   = count(db_read('likes.json'));
 $total_comments= count(db_read('comments.json'));
+
+// Blocked IPs
+try {
+    $pdo_admin = db();
+    $blocked_ips_list = $pdo_admin->query('SELECT * FROM blocked_ips ORDER BY created_at DESC')->fetchAll(PDO::FETCH_ASSOC);
+    $blocked_ips_set  = array_column($blocked_ips_list, 'ip');
+} catch (Throwable $e) {
+    $blocked_ips_list = [];
+    $blocked_ips_set  = [];
+}
 
 $page_title = 'Admin Panel';
 include __DIR__ . '/../includes/header.php';
@@ -236,12 +266,35 @@ include __DIR__ . '/../includes/header.php';
         <!-- IP Summary cards -->
         <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.2rem">
             <?php foreach (array_slice($ip_counts, 0, 20, true) as $ip => $cnt): ?>
-                <div style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:8px;padding:0.4rem 0.8rem;font-size:0.82rem">
+                <div style="background:<?= in_array($ip, $blocked_ips_set) ? 'rgba(239,68,68,.15)' : 'rgba(139,92,246,.1)' ?>;border:1px solid <?= in_array($ip, $blocked_ips_set) ? 'rgba(239,68,68,.4)' : 'rgba(139,92,246,.25)' ?>;border-radius:8px;padding:0.4rem 0.8rem;font-size:0.82rem;display:flex;align-items:center;gap:0.5rem">
                     <span style="color:var(--orange-hi);font-weight:700"><?= htmlspecialchars($ip) ?></span>
                     <span style="color:var(--text-muted)"> &times;<?= $cnt ?></span>
+                    <?php if (in_array($ip, $blocked_ips_set)): ?>
+                        <span style="color:#ef4444;font-size:0.75rem">🚫 blocked</span>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <!-- Blocked IPs panel -->
+        <?php if ($blocked_ips_list): ?>
+        <div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:1rem;margin-bottom:1.2rem">
+            <h4 style="color:#ef4444;margin-bottom:0.8rem">🚫 Currently Blocked IPs (<?= count($blocked_ips_list) ?>)</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+                <?php foreach ($blocked_ips_list as $b): ?>
+                <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:0.4rem 0.75rem;display:flex;align-items:center;gap:0.6rem;font-size:0.83rem">
+                    <code style="color:#ef4444"><?= htmlspecialchars($b['ip']) ?></code>
+                    <?php if ($b['reason']): ?><span style="color:var(--text-muted)"><?= htmlspecialchars($b['reason']) ?></span><?php endif; ?>
+                    <form method="POST" style="display:inline;margin:0">
+                        <input type="hidden" name="action" value="unblock_ip">
+                        <input type="hidden" name="ip" value="<?= htmlspecialchars($b['ip']) ?>">
+                        <button type="submit" style="background:none;border:1px solid rgba(239,68,68,.4);color:#ef4444;border-radius:5px;padding:0.15rem 0.45rem;cursor:pointer;font-size:0.75rem" onclick="return confirm('Unblock this IP?')">Unblock</button>
+                    </form>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <table class="admin-table">
             <thead>
@@ -251,6 +304,7 @@ include __DIR__ . '/../includes/header.php';
                     <th>Page</th>
                     <th>Browser / UA</th>
                     <th>Time</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -273,7 +327,22 @@ include __DIR__ . '/../includes/header.php';
                         <?= htmlspecialchars($r['user_agent'] ?? '') ?>
                     </td>
                     <td style="font-size:0.82rem;white-space:nowrap"><?= htmlspecialchars($r['visited_at']) ?></td>
-                </tr>
+                    <td>
+                        <?php if (in_array($r['ip'], $blocked_ips_set)): ?>
+                            <form method="POST" style="display:inline">
+                                <input type="hidden" name="action" value="unblock_ip">
+                                <input type="hidden" name="ip" value="<?= htmlspecialchars($r['ip']) ?>">
+                                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Unblock this IP?')">Unblock</button>
+                            </form>
+                        <?php else: ?>
+                            <form method="POST" style="display:inline;display:flex;gap:0.3rem;align-items:center">
+                                <input type="hidden" name="action" value="block_ip">
+                                <input type="hidden" name="ip" value="<?= htmlspecialchars($r['ip']) ?>">
+                                <input type="text" name="reason" placeholder="Reason (optional)" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:0.25rem 0.5rem;color:var(--text);font-size:0.78rem;width:120px">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Block this IP?')">🚫 Block</button>
+                            </form>
+                        <?php endif; ?>
+                    </td>
                 <?php endforeach; ?>
                 <?php if (!$vis_rows): ?>
                     <tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No visits logged yet.</td></tr>

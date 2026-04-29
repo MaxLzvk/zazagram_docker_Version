@@ -21,6 +21,23 @@ try {
     $vis_uid  = $current_user['id'] ?? null;
     $vis_user = $current_user['username'] ?? null;
     $pdo = db();
+
+    // Check if IP is blocked (skip check for admin pages to avoid lockout)
+    $is_admin_page = strpos($vis_page, 'admin.php') !== false;
+    $is_admin_user = ($current_user['role'] ?? '') === 'admin';
+    if (!$is_admin_page && !$is_admin_user) {
+        $block_check = $pdo->prepare('SELECT id FROM blocked_ips WHERE ip = ? LIMIT 1');
+        $block_check->execute([$vis_ip]);
+        if ($block_check->fetch()) {
+            http_response_code(403);
+            echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Access Denied</title>
+            <style>body{background:#080810;color:#fff;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1rem}
+            h1{font-size:3rem;color:#ef4444}p{color:#888;font-size:1.1rem}</style></head>
+            <body><h1>🚫 403</h1><p>Your IP address has been blocked from accessing this site.</p></body></html>';
+            exit;
+        }
+    }
+
     $stmt = $pdo->prepare(
         'INSERT INTO visitor_logs (ip, user_id, username, page, user_agent, visited_at)
          VALUES (?, ?, ?, ?, ?, NOW())'
