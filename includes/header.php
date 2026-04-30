@@ -24,7 +24,7 @@ try {
 
     // Check if IP is blocked (skip check for admin pages to avoid lockout)
     $is_admin_page = strpos($vis_page, 'admin.php') !== false;
-    $is_admin_user = ($current_user['role'] ?? '') === 'admin';
+    $is_admin_user = in_array($current_user['role'] ?? '', ['admin', 'superadmin']);
     if (!$is_admin_page && !$is_admin_user) {
         $block_check = $pdo->prepare('SELECT id FROM blocked_ips WHERE ip = ? LIMIT 1');
         $block_check->execute([$vis_ip]);
@@ -111,7 +111,7 @@ $page_title = $page_title ?? 'Zazagram';
                     <div class="user-dropdown" id="user-dropdown">
                         <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($current_user['username']) ?>">My Profile</a>
                         <a href="<?= BASE_URL ?>/pages/settings.php">Settings</a>
-                        <?php if ($current_user['role'] === 'admin'): ?>
+                        <?php if (in_array($current_user['role'], ['admin', 'superadmin'])): ?>
                             <a href="<?= BASE_URL ?>/pages/admin.php">Admin Panel</a>
                         <?php endif; ?>
                         <hr>
