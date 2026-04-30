@@ -30,6 +30,127 @@ document.querySelectorAll('.alert').forEach(el => {
     }, 4000);
 });
 
+// ── Global WebSocket manager ──────────────────────────────
+(function initGlobalWS() {
+    if (!window.ZZG) return; // not logged in
+
+    const ZZG = window.ZZG;
+    let ws, reconnectTimer;
+    window._zzgWS = { send: () => {} }; // placeholder until connected
+
+    function connect() {
+        clearTimeout(reconnectTimer);
+        ws = new WebSocket(ZZG.wsUrl);
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
+                type:     'auth',
+                user_id:  ZZG.userId,
+                username: ZZG.username,
+                avatar:   ZZG.avatar,
+            }));
+            window._zzgWS = ws;
+        };
+
+        ws.onmessage = (e) => {
+            let msg;
+            try { msg = JSON.parse(e.data); } catch { return; }
+            handleWSMessage(msg);
+        };
+
+        ws.onclose = () => {
+            window._zzgWS = { send: () => {} };
+            reconnectTimer = setTimeout(connect, 4000);
+        };
+
+        ws.onerror = () => ws.close();
+    }
+
+    function handleWSMessage(msg) {
+        switch (msg.type) {
+
+            // ── Nav badge updates ─────────────────────────
+            case 'badge_refresh':
+                fetch(ZZG.baseUrl + '/api/get_badges.php')
+                    .then(r => r.json())
+                    .then(d => {
+                        updateBadge('nav-notif-badge', d.notif_count);
+                        updateBadge('nav-msg-badge',   d.msg_count);
+                    }).catch(() => {});
+                break;
+
+            // ── Online list (feed sidebar) ────────────────
+            case 'online_list':
+                window.dispatchEvent(new CustomEvent('zzg:online_list', { detail: msg }));
+                break;
+
+            // ── New post (feed) ───────────────────────────
+            case 'new_post':
+                window.dispatchEvent(new CustomEvent('zzg:new_post', { detail: msg }));
+                break;
+
+            // ── Post deleted ──────────────────────────────
+            case 'delete_post': {
+                // Remove from DOM on any page that shows posts
+                const el = document.getElementById('post-' + msg.post_id);
+                if (el) el.remove();
+                window.dispatchEvent(new CustomEvent('zzg:delete_post', { detail: msg }));
+                break;
+            }
+
+            // ── Avatar updated ────────────────────────────
+            case 'avatar': {
+                const ver = new Date(msg.updated_at).getTime();
+                document.querySelectorAll(`img[data-user-id="${msg.user_id}"]`).forEach(img => {
+                    img.src = ZZG.baseUrl + '/uploads/' + msg.filename + '?v=' + ver;
+                });
+                // Update global ZZG.avatar if it's our own avatar
+                if (msg.user_id === ZZG.userId) {
+                    ZZG.avatar    = msg.filename;
+                    ZZG.avatarVer = ver;
+                }
+                window.dispatchEvent(new CustomEvent('zzg:avatar', { detail: msg }));
+                break;
+            }
+
+            // ── New message ───────────────────────────────
+            case 'new_message':
+                updateBadge('nav-msg-badge', null, +1);
+                window.dispatchEvent(new CustomEvent('zzg:new_message', { detail: msg }));
+                break;
+
+            // ── Message deleted ───────────────────────────
+            case 'delete_message':
+                window.dispatchEvent(new CustomEvent('zzg:delete_message', { detail: msg }));
+                break;
+
+            // ── Typing indicator ──────────────────────────
+            case 'typing':
+                window.dispatchEvent(new CustomEvent('zzg:typing', { detail: msg }));
+                break;
+
+            // ── Force logout (ban/kick) ───────────────────
+            case 'force_logout':
+                window.location.href = (window.ZZG?.baseUrl || '') + '/pages/banned.php';
+                break;
+        }
+    }
+
+    connect();
+})();
+
+// ── Nav badge helper ───────────────────────────────────────
+function updateBadge(id, value, delta) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let n = value !== null && value !== undefined
+        ? Number(value)
+        : (parseInt(el.textContent || 0) + (delta || 0));
+    if (n < 0) n = 0;
+    el.textContent = n;
+    el.style.display = n > 0 ? '' : 'none';
+}
+
 // ── Particle canvas background ────────────────────────────
 (function initParticles() {
     const canvas = document.createElement('canvas');

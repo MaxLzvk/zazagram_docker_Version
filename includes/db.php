@@ -17,11 +17,11 @@ function db_table_from_file(string $file): string {
 
 function db_columns(string $table): array {
     return [
-        'users' => ['id','username','email','password','first_name','last_name','bio','profile_picture','role','is_banned','created_at','updated_at'],
+        'users' => ['id','username','email','password','first_name','last_name','bio','profile_picture','role','is_banned','ban_reason','ban_until','created_at','updated_at'],
         'posts' => ['id','user_id','caption','image','filter','created_at','updated_at'],
         'comments' => ['id','post_id','user_id','content','created_at'],
         'friends' => ['id','requester_id','receiver_id','status','created_at','updated_at'],
-        'messages' => ['id','sender_id','receiver_id','content','is_read','created_at'],
+        'messages' => ['id','sender_id','receiver_id','content','image','is_read','created_at'],
         'notifications' => ['id','user_id','actor_id','type','reference_id','reference_type','message','is_read','created_at'],
         'likes' => ['id','user_id','post_id','created_at'],
     ][$table];
@@ -165,4 +165,33 @@ function json_response(array $data, int $status = 200): void {
 /** Current UTC timestamp string. */
 function now(): string {
     return (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z');
+}
+
+/**
+ * Add a notification for a user and keep only the latest 10 per user.
+ * Automatically calls db_write so callers don't need to.
+ */
+function notify_user(int $user_id, int $actor_id, string $type, int $reference_id, string $reference_type, string $message): void {
+    $notifs   = db_read('notifications.json');
+    $notifs[] = [
+        'id'             => db_next_id($notifs),
+        'user_id'        => $user_id,
+        'actor_id'       => $actor_id,
+        'type'           => $type,
+        'reference_id'   => $reference_id,
+        'reference_type' => $reference_type,
+        'message'        => $message,
+        'is_read'        => false,
+        'created_at'     => now(),
+    ];
+
+    // Cap at 10 notifications per user — drop the oldest when over the limit
+    $user_keys = array_keys(array_filter($notifs, fn($n) => (int)$n['user_id'] === $user_id));
+    if (count($user_keys) > 10) {
+        $to_remove = array_slice($user_keys, 0, count($user_keys) - 10);
+        foreach ($to_remove as $k) unset($notifs[$k]);
+        $notifs = array_values($notifs);
+    }
+
+    db_write('notifications.json', $notifs);
 }

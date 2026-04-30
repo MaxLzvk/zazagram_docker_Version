@@ -47,4 +47,12 @@ $users = db_read('users.json');
 $users = db_update($users, $me['id'], ['profile_picture' => $filename, 'updated_at' => now()]);
 db_write('users.json', $users);
 
+ws_push([
+    'type'       => 'avatar',
+    'broadcast'  => true,
+    'user_id'    => $me['id'],
+    'filename'   => $filename,
+    'updated_at' => now(),
+]);
+
 json_response(['success' => true, 'filename' => $filename]);

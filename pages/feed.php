@@ -207,7 +207,7 @@ include __DIR__ . '/../includes/header.php';
                         </div>
                         <span class="post-time"><?= time_ago($post['created_at']) ?></span>
                     </div>
-                    <?php if ($is_own_post || $me['role'] === 'admin'): ?>
+                    <?php if ($is_own_post || in_array($me['role'], ['admin', 'superadmin'])): ?>
                         <div class="post-menu">
                             <button class="post-menu-btn" onclick="togglePostMenu(<?= $post['id'] ?>)"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
                             <div class="post-dropdown" id="pdrop-<?= $post['id'] ?>">
@@ -220,9 +220,11 @@ include __DIR__ . '/../includes/header.php';
                 <!-- Post Image -->
                 <?php if ($post['image']): ?>
                     <div class="post-image-wrap">
+                        <a href="<?= BASE_URL ?>/pages/post.php?id=<?= $post['id'] ?>">
                         <img src="<?= BASE_URL ?>/uploads/<?= htmlspecialchars($post['image']) ?>"
                              alt="post"
                              class="post-image filter-<?= htmlspecialchars($post['filter']) ?>">
+                        </a>
                     </div>
                 <?php endif; ?>
 
@@ -283,6 +285,12 @@ include __DIR__ . '/../includes/header.php';
                             <span class="action-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z" clip-rule="evenodd"/></svg></span>
                             <span class="action-label">Share</span>
                         </button>
+
+                        <!-- View full post -->
+                        <a class="action-btn" href="<?= BASE_URL ?>/pages/post.php?id=<?= $post['id'] ?>" style="text-decoration:none">
+                            <span class="action-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg></span>
+                            <span class="action-label">View</span>
+                        </a>
 
                     </div>
 
@@ -397,68 +405,99 @@ const MY_AVATAR_VER     = <?= strtotime($me['updated_at']) ?: 0 ?>;
 const IS_ADMIN          = <?= $me['role'] === 'admin' ? 'true' : 'false' ?>;
 const BASE_URL_JS       = '<?= BASE_URL ?>';
 
-// ── WebSocket: Online Users ──────────────────────────────
-(function initOnlineWS() {
-    const WS_URL = 'ws://' + location.hostname + ':8084';
-    let ws, reconnectTimer;
+// ── WS: Online Users (driven by global WS in main.js) ────
+window.addEventListener('zzg:online_list', (e) => renderOnline(e.detail.users));
 
-    function connect() {
-        ws = new WebSocket(WS_URL);
+// ── WS: New post pushed by another user ──────────────────
+window.addEventListener('zzg:new_post', (e) => {
+    const { post, author } = e.detail;
+    if (!post || !author) return;
+    if (post.id <= FEED_LAST_POST_ID) return; // already on page
+    if (document.getElementById('post-' + post.id)) return;
 
-        ws.onopen = () => {
-            ws.send(JSON.stringify({
-                type:     'auth',
-                user_id:  MY_USER_ID,
-                username: MY_USERNAME,
-                avatar:   MY_AVATAR
-            }));
-        };
+    const wrap = document.getElementById('feed-posts');
+    if (!wrap) return;
 
-        ws.onmessage = (e) => {
-            try {
-                const msg = JSON.parse(e.data);
-                if (msg.type === 'online_list') renderOnline(msg.users);
-            } catch(_) {}
-        };
+    const avatarSrc = BASE_URL_JS + '/uploads/' + (author.profile_picture || 'default_avatar.png');
+    const isOwn     = post.user_id == MY_USER_ID;
 
-        ws.onclose = () => {
-            reconnectTimer = setTimeout(connect, 4000);
-        };
-
-        ws.onerror = () => ws.close();
-    }
-
-    function renderOnline(users) {
-        const list  = document.getElementById('online-list');
-        const count = document.getElementById('online-count');
-        if (!list) return;
-        count.textContent = '(' + users.length + ')';
-        if (users.length === 0) {
-            list.innerHTML = '<p class="muted-sm">No one online right now.</p>';
-            return;
-        }
-        list.innerHTML = users.map(u => {
-            const isSelf = u.id == MY_USER_ID;
-            const avatarSrc = BASE_URL_JS + '/uploads/' + (u.avatar || 'default_avatar.png');
-            return `
-            <a href="${BASE_URL_JS}/pages/profile.php?username=${encodeURIComponent(u.username)}"
-               class="active-user-item" style="text-decoration:none">
-                <div class="active-avatar-wrap">
-                    <img src="${avatarSrc}"
-                         class="active-avatar"
+    const div = document.createElement('div');
+    div.className = 'post-card reveal visible';
+    div.id = 'post-' + post.id;
+    div.innerHTML = `
+        <div class="post-header">
+            <div class="post-author">
+                <a href="${BASE_URL_JS}/pages/profile.php?username=${encodeURIComponent(author.username)}">
+                    <img src="${avatarSrc}" class="post-avatar" data-user-id="${author.id}"
                          onerror="this.src='${BASE_URL_JS}/assets/images/default_avatar.png'">
-                    <span class="active-dot" style="background:#22c55e;box-shadow:0 0 0 2px #080810,0 0 6px #22c55e"></span>
+                </a>
+                <a href="${BASE_URL_JS}/pages/profile.php?username=${encodeURIComponent(author.username)}" style="text-decoration:none">
+                    <strong>${escHtml(author.username)}</strong>
+                </a>
+            </div>
+            <span class="post-time">just now</span>
+            ${(isOwn || IS_ADMIN) ? `
+            <div class="post-menu">
+                <button class="post-menu-btn" onclick="togglePostMenu(${post.id})">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                </button>
+                <div class="post-dropdown" id="pdrop-${post.id}">
+                    <button onclick="deletePost(${post.id})">Delete</button>
                 </div>
-                <div>
-                    <span class="active-name">@${u.username}${isSelf ? ' <span style="font-size:0.68rem;color:var(--orange)">(you)</span>' : ''}</span>
-                    <span class="active-time" style="color:#22c55e;font-size:0.72rem">● online</span>
-                </div>
-            </a>`;
-        }).join('');
-    }
+            </div>` : ''}
+        </div>
+        ${post.image ? `<div class="post-image-wrap"><img src="${BASE_URL_JS}/uploads/${escHtml(post.image)}" class="post-image filter-${escHtml(post.filter || 'none')}" alt="post"></div>` : ''}
+        <div class="post-body">
+            <p class="post-caption">${escHtml(post.caption || '').replace(/\n/g,'<br>')}</p>
+            <div class="post-actions">
+                <button class="like-btn" id="likebtn-${post.id}" onclick="toggleLikeSimple(${post.id})">
+                    <span class="like-icon" id="like-icon-${post.id}">♡</span>
+                    <span id="like-label-${post.id}">Like</span>
+                    <span class="like-count" id="like-count-${post.id}">0</span>
+                </button>
+            </div>
+        </div>`;
+    wrap.prepend(div);
+});
 
-    connect();
-})();
+// ── WS: Avatar updated ────────────────────────────────────
+window.addEventListener('zzg:avatar', (e) => {
+    // main.js already updates all img[data-user-id] elements; nothing extra needed here
+});
+
+function renderOnline(rawUsers) {
+    const seen  = new Set();
+    const users = rawUsers.filter(u => {
+        const key = String(u.id);
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+    });
+    const list  = document.getElementById('online-list');
+    const count = document.getElementById('online-count');
+    if (!list) return;
+    count.textContent = '(' + users.length + ')';
+    if (users.length === 0) {
+        list.innerHTML = '<p class="muted-sm">No one online right now.</p>';
+        return;
+    }
+    list.innerHTML = users.map(u => {
+        const isSelf    = u.id == MY_USER_ID;
+        const avatarSrc = BASE_URL_JS + '/uploads/' + (u.avatar || 'default_avatar.png');
+        return `
+        <a href="${BASE_URL_JS}/pages/profile.php?username=${encodeURIComponent(u.username)}"
+           class="active-user-item" style="text-decoration:none">
+            <div class="active-avatar-wrap">
+                <img src="${avatarSrc}" class="active-avatar"
+                     onerror="this.src='${BASE_URL_JS}/assets/images/default_avatar.png'">
+                <span class="active-dot" style="background:#22c55e;box-shadow:0 0 0 2px #080810,0 0 6px #22c55e"></span>
+            </div>
+            <div>
+                <span class="active-name">@${u.username}${isSelf ? ' <span style="font-size:0.68rem;color:var(--orange)">(you)</span>' : ''}</span>
+                <span class="active-time" style="color:#22c55e;font-size:0.72rem">● online</span>
+            </div>
+        </a>`;
+    }).join('');
+}
 
 function toggleLikeSimple(postId) {
     const btn   = document.getElementById('likebtn-' + postId);

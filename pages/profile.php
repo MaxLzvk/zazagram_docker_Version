@@ -128,14 +128,26 @@ include __DIR__ . '/../includes/header.php';
                 $comment_count = count(db_find_all($all_comments, 'post_id', $post['id']));
                 $liked         = (bool) db_find_one(db_find_all($all_likes, 'post_id', $post['id']), 'user_id', $me['id']);
                 ?>
-                <div class="post-card" id="post-<?= $post['id'] ?>">
+                <div class="post-card" id="post-<?= $post['id'] ?>" style="position:relative">
+                    <?php if ($is_own_profile || $me['role'] === 'admin'): ?>
+                        <div class="post-menu" style="position:absolute;top:8px;right:8px;z-index:10">
+                            <button class="post-menu-btn" onclick="togglePostMenu(<?= $post['id'] ?>)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                            </button>
+                            <div class="post-dropdown" id="pdrop-<?= $post['id'] ?>">
+                                <button onclick="deletePost(<?= $post['id'] ?>)">Delete</button>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     <?php if ($post['image']): ?>
                         <div class="post-image-wrap">
+                            <a href="<?= BASE_URL ?>/pages/post.php?id=<?= $post['id'] ?>">
                             <img
                                 src="<?= BASE_URL ?>/uploads/<?= htmlspecialchars($post['image']) ?>"
                                 alt="post"
                                 class="post-image filter-<?= htmlspecialchars($post['filter']) ?>"
                             >
+                            </a>
                         </div>
                     <?php endif; ?>
                     <div class="post-body">
@@ -200,6 +212,31 @@ function respondFriend(userId, action, btn) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ action: action, requester_id: userId })
     }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+}
+function togglePostMenu(id) {
+    const drop = document.getElementById('pdrop-' + id);
+    document.querySelectorAll('.post-dropdown').forEach(d => { if (d !== drop) d.classList.remove('open'); });
+    drop.classList.toggle('open');
+}
+document.addEventListener('click', e => {
+    if (!e.target.closest('.post-menu')) {
+        document.querySelectorAll('.post-dropdown').forEach(d => d.classList.remove('open'));
+    }
+});
+function deletePost(id) {
+    if (!confirm('Delete this post?')) return;
+    fetch('<?= BASE_URL ?>/api/delete_post.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: id })
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            const el = document.getElementById('post-' + id);
+            if (el) el.remove();
+        } else {
+            alert(d.error || 'Could not delete post.');
+        }
+    });
 }
 </script>
 

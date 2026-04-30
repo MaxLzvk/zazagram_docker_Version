@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
   profile_picture VARCHAR(255) DEFAULT 'default_avatar.png',
   role ENUM('user','admin','superadmin') NOT NULL DEFAULT 'user',
   is_banned TINYINT(1) NOT NULL DEFAULT 0,
+  ban_reason VARCHAR(500) NULL DEFAULT NULL,
+  ban_until DATETIME NULL DEFAULT NULL,
   created_at VARCHAR(32) NOT NULL,
   updated_at VARCHAR(32) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -69,6 +71,7 @@ CREATE TABLE IF NOT EXISTS messages (
   sender_id INT NOT NULL,
   receiver_id INT NOT NULL,
   content TEXT NOT NULL,
+  image VARCHAR(255) NULL DEFAULT NULL,
   is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at VARCHAR(32) NOT NULL,
   INDEX (sender_id),

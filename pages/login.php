@@ -29,7 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$user || !password_verify($password, $user['password'])) {
             $error = 'Invalid username/email or password.';
         } elseif ($user['is_banned']) {
-            $error = 'Your account has been suspended.';
+            // Redirect to ban page so they can see the reason
+            session_regenerate_id(true);
+            $_SESSION['user_id']  = $user['id'];
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role']     = $user['role'];
+            header('Location: ' . BASE_URL . '/pages/banned.php');
+            exit;
         } else {
             session_regenerate_id(true);
             $_SESSION['user_id']   = $user['id'];

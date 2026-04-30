@@ -40,18 +40,16 @@ $messages[] = $new_msg;
 db_write('messages.json', $messages);
 
 // Notification
-$notifs = db_read('notifications.json');
-$notifs[] = [
-    'id'             => db_next_id($notifs),
-    'user_id'        => $receiver_id,
-    'actor_id'       => $me['id'],
-    'type'           => 'message',
-    'reference_id'   => $new_msg['id'],
-    'reference_type' => 'message',
-    'message'        => $me['username'] . ' sent you a message',
-    'is_read'        => false,
-    'created_at'     => now(),
-];
-db_write('notifications.json', $notifs);
+notify_user($receiver_id, $me['id'], 'message', $new_msg['id'], 'message', $me['username'] . ' sent you a message');
+
+// Push real-time events via WebSocket
+ws_push([
+    'type'       => 'new_message',
+    'to_user_id' => $receiver_id,
+    'message'    => $new_msg,
+    'from'       => ['id' => $me['id'], 'username' => $me['username'], 'avatar' => $me['profile_picture']],
+]);
+// Push badge refresh to receiver
+ws_push(['type' => 'badge_refresh', 'to_user_id' => $receiver_id]);
 
 json_response(['success' => true, 'message' => $new_msg]);

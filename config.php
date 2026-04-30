@@ -37,6 +37,28 @@ define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 // Available post filters
 define('POST_FILTERS', ['none', 'warm', 'cool', 'mono', 'vintage', 'fade', 'vivid']);
 
+// WebSocket push endpoint (internal Docker network)
+define('WS_PUSH_URL', 'http://ws:8085/push');
+
+/**
+ * Fire-and-forget push to the WebSocket server.
+ * $payload must include 'type', plus either 'broadcast'=>true or 'to_user_id'=>N.
+ */
+function ws_push(array $payload): void {
+    $json = json_encode($payload);
+    $ch   = curl_init(WS_PUSH_URL);
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $json,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Content-Length: ' . strlen($json)],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 1,
+        CURLOPT_CONNECTTIMEOUT => 1,
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
 // Start session globally
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(SESSION_LIFETIME);

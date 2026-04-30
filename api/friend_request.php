@@ -36,19 +36,8 @@ switch ($action) {
         db_write('friends.json', $friends);
 
         // Notify receiver
-        $notifs = db_read('notifications.json');
-        $notifs[] = [
-            'id'             => db_next_id($notifs),
-            'user_id'        => $receiver_id,
-            'actor_id'       => $me['id'],
-            'type'           => 'friend_request',
-            'reference_id'   => $new_req['id'],
-            'reference_type' => 'friend',
-            'message'        => $me['username'] . ' sent you a friend request',
-            'is_read'        => false,
-            'created_at'     => now(),
-        ];
-        db_write('notifications.json', $notifs);
+        notify_user($receiver_id, $me['id'], 'friend_request', $new_req['id'], 'friend', $me['username'] . ' sent you a friend request');
+        ws_push(['type' => 'badge_refresh', 'to_user_id' => $receiver_id]);
         json_response(['success' => true]);
 
     case 'accept':

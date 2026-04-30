@@ -8,6 +8,8 @@ $users = db_read('users.json');
 
 $notifs = db_read('notifications.json');
 $my_notifs = array_reverse(db_find_all($notifs, 'user_id', $me['id']));
+// Cap display to the 10 most recent
+$my_notifs = array_slice($my_notifs, 0, 10);
 
 // Mark all as read
 $notifs = array_map(function($n) use ($me) {

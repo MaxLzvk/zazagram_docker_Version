@@ -88,14 +88,18 @@ $page_title = $page_title ?? 'Zazagram';
                 <a href="<?= BASE_URL ?>/pages/messages.php" class="nav-btn nav-notif" title="Messages">
                     Msgs
                     <?php if ($msg_count > 0): ?>
-                        <span class="badge"><?= $msg_count ?></span>
+                        <span class="badge" id="nav-msg-badge"><?= $msg_count ?></span>
+                    <?php else: ?>
+                        <span class="badge" id="nav-msg-badge" style="display:none">0</span>
                     <?php endif; ?>
                 </a>
 
                 <a href="<?= BASE_URL ?>/pages/notifications.php" class="nav-btn nav-notif" title="Notifications">
                     Notifs
                     <?php if ($notif_count > 0): ?>
-                        <span class="badge"><?= $notif_count ?></span>
+                        <span class="badge" id="nav-notif-badge"><?= $notif_count ?></span>
+                    <?php else: ?>
+                        <span class="badge" id="nav-notif-badge" style="display:none">0</span>
                     <?php endif; ?>
                 </a>
 
@@ -144,7 +148,58 @@ document.addEventListener('click', function(event) {
         panel.classList.remove('open');
     }
 });
+
+// ── Theme (light/dark) toggle ───────────────────────────
+(function applyTheme() {
+    if ((localStorage.getItem('zzgTheme') || 'dark') === 'light') {
+        document.body.classList.add('light-mode');
+    }
+})();
+
+function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-mode');
+    localStorage.setItem('zzgTheme', isLight ? 'light' : 'dark');
+}
 </script>
+<?php if ($current_user): ?>
+<script>
+// ── Global constants used by all pages ──────────────────
+window.ZZG = {
+    userId:   <?= $current_user['id'] ?>,
+    username: <?= json_encode($current_user['username']) ?>,
+    avatar:   <?= json_encode($current_user['profile_picture']) ?>,
+    avatarVer:<?= strtotime($current_user['updated_at']) ?: 0 ?>,
+    isAdmin:  <?= in_array($current_user['role'], ['admin','superadmin']) ? 'true' : 'false' ?>,
+    baseUrl:  <?= json_encode(BASE_URL) ?>,
+    wsUrl:    'ws://' + location.hostname + ':8084',
+};
+</script>
+
+<!-- Google Translate (hidden widget, controlled via settings) -->
+<div id="google_translate_element" style="display:none"></div>
+<script>
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({ pageLanguage: 'en', autoDisplay: false }, 'google_translate_element');
+}
+// Restore saved language
+(function restoreLang() {
+    const lang = localStorage.getItem('zzgLang');
+    if (lang && lang !== 'en') {
+        document.cookie = 'googtrans=/en/' + lang + '; path=/; domain=' + location.hostname;
+        document.cookie = 'googtrans=/en/' + lang + '; path=/';
+    }
+})();
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
+<style>
+/* Hide Google Translate top bar */
+.goog-te-banner-frame { display: none !important; }
+body { top: 0 !important; }
+.skiptranslate iframe { display: none !important; }
+#goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+</style>
+
+<?php endif; ?>
 <?php endif; ?>
 
 <main class="main-content">

@@ -37,4 +37,6 @@ $comments = db_read('comments.json');
 $comments = array_values(array_filter($comments, fn($c) => $c['post_id'] !== $post_id));
 db_write('comments.json', $comments);
 
+ws_push(['type' => 'delete_post', 'broadcast' => true, 'post_id' => $post_id]);
+
 json_response(['success' => true]);

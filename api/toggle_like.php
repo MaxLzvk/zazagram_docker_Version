@@ -55,19 +55,8 @@ if ($existing) {
     // Notify post author (don't notify self)
     $post = db_find_one($posts, 'id', $post_id);
     if ($post && $post['user_id'] !== $me['id']) {
-        $notifs = db_read('notifications.json');
-        $notifs[] = [
-            'id'             => db_next_id($notifs),
-            'user_id'        => $post['user_id'],
-            'actor_id'       => $me['id'],
-            'type'           => 'like',
-            'reference_id'   => $post_id,
-            'reference_type' => 'post',
-            'message'        => $me['username'] . ' liked your post',
-            'is_read'        => false,
-            'created_at'     => now(),
-        ];
-        db_write('notifications.json', $notifs);
+        notify_user($post['user_id'], $me['id'], 'like', $post_id, 'post', $me['username'] . ' liked your post');
+        ws_push(['type' => 'badge_refresh', 'to_user_id' => $post['user_id']]);
     }
 }
 

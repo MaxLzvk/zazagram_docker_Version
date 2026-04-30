@@ -29,6 +29,21 @@ function require_login(): void {
         header('Location: ' . BASE_URL . '/pages/login.php?deleted=1');
         exit;
     }
+    // If the account is banned, check if a timed ban has expired and auto-unban
+    if ($user['is_banned']) {
+        $ban_until = $user['ban_until'] ?? null;
+        if ($ban_until && strtotime($ban_until) !== false && time() >= strtotime($ban_until)) {
+            // Ban expired — lift it automatically
+            try {
+                db()->prepare('UPDATE users SET is_banned=0, ban_reason=NULL, ban_until=NULL, updated_at=NOW() WHERE id=?')
+                   ->execute([$user['id']]);
+            } catch (Throwable $e) {}
+        } else {
+            // Still banned — redirect to ban screen
+            header('Location: ' . BASE_URL . '/pages/banned.php');
+            exit;
+        }
+    }
 }
 
 /**

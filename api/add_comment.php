@@ -34,19 +34,9 @@ db_write('comments.json', $comments);
 
 // Notify post author
 if ($post['user_id'] !== $me['id']) {
-    $notifs = db_read('notifications.json');
-    $notifs[] = [
-        'id'             => db_next_id($notifs),
-        'user_id'        => $post['user_id'],
-        'actor_id'       => $me['id'],
-        'type'           => 'comment',
-        'reference_id'   => $post_id,
-        'reference_type' => 'post',
-        'message'        => $me['username'] . ' commented on your post',
-        'is_read'        => false,
-        'created_at'     => now(),
-    ];
-    db_write('notifications.json', $notifs);
+    notify_user($post['user_id'], $me['id'], 'comment', $post_id, 'post', $me['username'] . ' commented on your post');
+    // Push badge refresh to post author
+    ws_push(['type' => 'badge_refresh', 'to_user_id' => $post['user_id']]);
 }
 
 json_response([

@@ -26,14 +26,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_id = (int)($_POST['post_id'] ?? 0);
 
     if ($act === 'ban' && $user_id && $user_id !== $me['id']) {
-        $target = db_find_one($users, 'id', $user_id);
-        $users = db_update($users, $user_id, ['is_banned' => true, 'updated_at' => now()]);
+        $target     = db_find_one($users, 'id', $user_id);
+        $ban_reason = trim($_POST['ban_reason'] ?? '');
+        $ban_dur    = $_POST['ban_duration'] ?? 'permanent'; // e.g. '1h','6h','1d','7d','30d','permanent'
+        $ban_until  = null;
+        if ($ban_dur !== 'permanent') {
+            $map = ['1h'=>3600,'6h'=>21600,'12h'=>43200,'1d'=>86400,'3d'=>259200,'7d'=>604800,'14d'=>1209600,'30d'=>2592000];
+            $secs = $map[$ban_dur] ?? null;
+            if ($secs) $ban_until = date('Y-m-d H:i:s', time() + $secs);
+        }
+        $users = db_update($users, $user_id, ['is_banned' => true, 'ban_reason' => $ban_reason, 'ban_until' => $ban_until, 'updated_at' => now()]);
         db_write('users.json', $users);
-        log_admin_action($me, 'ban_user', 'user', $user_id, 'Banned @'.($target['username']??''));
-        $flash = 'User banned.';
+        $dur_label = $ban_until ? "until $ban_until" : 'permanently';
+        log_admin_action($me, 'ban_user', 'user', $user_id, 'Banned @'.($target['username']??'')." $dur_label".($ban_reason?" | Reason: $ban_reason":''));
+        // Instantly kick the user via WebSocket
+        ws_push(['type' => 'force_logout', 'to_user_id' => $user_id]);
+        $flash = 'User banned' . ($ban_until ? " until $ban_until (UTC)." : ' permanently.');
     } elseif ($act === 'unban' && $user_id) {
         $target = db_find_one($users, 'id', $user_id);
-        $users = db_update($users, $user_id, ['is_banned' => false, 'updated_at' => now()]);
+        $users = db_update($users, $user_id, ['is_banned' => false, 'ban_reason' => null, 'ban_until' => null, 'updated_at' => now()]);
         db_write('users.json', $users);
         log_admin_action($me, 'unban_user', 'user', $user_id, 'Unbanned @'.($target['username']??''));
         $flash = 'User unbanned.';
@@ -234,7 +245,25 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Users tab -->
     <div id="tab-users" class="tab-content card">
-        <h3 style="margin-bottom:1.2rem">All Users <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem">(<?= count($users) ?>)</span></h3>
+        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;margin-bottom:1.2rem">
+            <h3 style="margin:0">All Users <span style="color:var(--text-muted);font-weight:400;font-size:0.85rem">(<?= count($users) ?>)</span></h3>
+            <input id="admin-user-search" type="text" placeholder="Search by username, email…"
+                   style="flex:1;min-width:180px;max-width:280px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:0.45rem 0.85rem;color:var(--text);font-size:0.88rem"
+                   oninput="filterAdminUsers()">
+            <select id="admin-role-filter" onchange="filterAdminUsers()"
+                    style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:0.45rem 0.7rem;color:var(--text);font-size:0.88rem">
+                <option value="">All Roles</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="superadmin">Superadmin</option>
+            </select>
+            <select id="admin-status-filter" onchange="filterAdminUsers()"
+                    style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:0.45rem 0.7rem;color:var(--text);font-size:0.88rem">
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="banned">Banned</option>
+            </select>
+        </div>
         <div style="overflow-x:auto">
         <table class="admin-table">
             <thead>
@@ -244,7 +273,11 @@ include __DIR__ . '/../includes/header.php';
             </thead>
             <tbody>
                 <?php foreach ($users as $u): ?>
-                    <tr class="<?= $u['is_banned'] ? 'row-banned' : '' ?>">
+                    <tr class="<?= $u['is_banned'] ? 'row-banned' : '' ?> admin-user-row"
+                        data-username="<?= strtolower(htmlspecialchars($u['username'])) ?>"
+                        data-email="<?= strtolower(htmlspecialchars($u['email'])) ?>"
+                        data-role="<?= htmlspecialchars($u['role']) ?>"
+                        data-status="<?= $u['is_banned'] ? 'banned' : 'active' ?>">
                         <td><?= $u['id'] ?></td>
                         <td>
                             <a href="<?= BASE_URL ?>/pages/profile.php?username=<?= urlencode($u['username']) ?>" style="font-weight:600;color:var(--text)">
@@ -275,7 +308,8 @@ include __DIR__ . '/../includes/header.php';
                                 <?php if ($u['is_banned']): ?>
                                     <button name="action" value="unban" class="btn btn-sm btn-success">Unban</button>
                                 <?php else: ?>
-                                    <button name="action" value="ban" class="btn btn-sm btn-warning">Ban</button>
+                                    <button name="action" value="ban" class="btn btn-sm btn-warning"
+                                            onclick="return showBanForm(event, <?= $u['id'] ?>)">Ban</button>
                                 <?php endif; ?>
                                 <button name="action" value="delete_user" class="btn btn-sm btn-danger"
                                         onclick="return confirm('Delete user and all their data?')">Delete</button>
@@ -310,7 +344,12 @@ include __DIR__ . '/../includes/header.php';
 
     <!-- Posts tab -->
     <div id="tab-posts" class="tab-content card" style="display:none">
-        <h3>All Posts</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;margin-bottom:1.2rem">
+            <h3 style="margin:0">All Posts</h3>
+            <input id="admin-post-search" type="text" placeholder="Search by author, caption…"
+                   style="flex:1;min-width:180px;max-width:320px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:0.45rem 0.85rem;color:var(--text);font-size:0.88rem"
+                   oninput="filterAdminPosts()">
+        </div>
         <table class="admin-table">
             <thead>
                 <tr>
@@ -321,13 +360,17 @@ include __DIR__ . '/../includes/header.php';
                 <?php foreach (array_reverse($posts) as $p):
                     $author = db_find_one($users, 'id', $p['user_id']);
                 ?>
-                    <tr>
+                    <tr class="admin-post-row"
+                        data-author="<?= strtolower(htmlspecialchars($author['username'] ?? '')) ?>"
+                        data-caption="<?= strtolower(htmlspecialchars(substr($p['caption'], 0, 200))) ?>">
                         <td><?= $p['id'] ?></td>
                         <td><?= htmlspecialchars($author['username'] ?? '?') ?></td>
                         <td><?= htmlspecialchars(substr($p['caption'], 0, 60)) ?>…</td>
                           <td><?= $p['image'] ? 'Yes' : '—' ?></td>
                         <td><?= date('M j, Y', strtotime($p['created_at'])) ?></td>
-                        <td>
+                        <td style="white-space:nowrap;display:flex;gap:0.4rem;align-items:center">
+                            <a href="<?= BASE_URL ?>/pages/post.php?id=<?= $p['id'] ?>" target="_blank"
+                               class="btn btn-sm" style="background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.4);color:#a5b4fc">View</a>
                             <form method="POST" style="display:inline">
                                 <input type="hidden" name="post_id" value="<?= $p['id'] ?>">
                                 <button name="action" value="delete_post" class="btn btn-sm btn-danger"
@@ -532,6 +575,45 @@ function togglePwForm(uid) {
     if (!isOpen) { el.style.display = 'block'; el.querySelector('input[type=password]').focus(); }
 }
 
+// ── Ban with reason modal ─────────────────────────────────
+function showBanForm(e, userId) {
+    e.preventDefault();
+    const overlay = document.getElementById('ban-modal-overlay');
+    document.getElementById('ban-modal-uid').value = userId;
+    document.getElementById('ban-modal-reason').value = '';
+    overlay.style.display = 'flex';
+    setTimeout(() => document.getElementById('ban-modal-reason').focus(), 80);
+    return false;
+}
+function closeBanModal() {
+    document.getElementById('ban-modal-overlay').style.display = 'none';
+}
+document.getElementById('ban-modal-form')?.addEventListener('submit', function(e) {
+    // form submits normally to POST
+});
+
+// ── User search + filter ──────────────────────────────────
+function filterAdminUsers() {
+    const q      = (document.getElementById('admin-user-search').value || '').toLowerCase();
+    const role   = (document.getElementById('admin-role-filter').value || '').toLowerCase();
+    const status = (document.getElementById('admin-status-filter').value || '').toLowerCase();
+    document.querySelectorAll('.admin-user-row').forEach(row => {
+        const matchQ = !q || row.dataset.username.includes(q) || row.dataset.email.includes(q);
+        const matchR = !role || row.dataset.role === role;
+        const matchS = !status || row.dataset.status === status;
+        row.style.display = (matchQ && matchR && matchS) ? '' : 'none';
+    });
+}
+
+// ── Post search ───────────────────────────────────────────
+function filterAdminPosts() {
+    const q = (document.getElementById('admin-post-search').value || '').toLowerCase();
+    document.querySelectorAll('.admin-post-row').forEach(row => {
+        const match = !q || row.dataset.author.includes(q) || row.dataset.caption.includes(q);
+        row.style.display = match ? '' : 'none';
+    });
+}
+
 let geoLoaded = false;
 async function loadGeoData() {
     if (geoLoaded) return;
@@ -587,3 +669,42 @@ async function loadGeoData() {
 </script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+
+<!-- Ban reason modal -->
+<div id="ban-modal-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+    <div style="background:#12121c;border:1px solid rgba(239,68,68,.4);border-radius:16px;padding:2rem;max-width:420px;width:90%;box-shadow:0 0 40px rgba(239,68,68,.15)">
+        <h3 style="color:#ef4444;margin-bottom:0.4rem;display:flex;align-items:center;gap:0.5rem">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            Ban User
+        </h3>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem">The user will be instantly disconnected and shown this reason.</p>
+        <form id="ban-modal-form" method="POST">
+            <input type="hidden" name="action" value="ban">
+            <input type="hidden" name="user_id" id="ban-modal-uid">
+            <div style="margin-bottom:1rem">
+                <label style="display:block;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;color:var(--text-sub)">Ban duration</label>
+                <select name="ban_duration" id="ban-modal-duration"
+                        style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:0.6rem 0.9rem;color:var(--text);font-family:inherit;font-size:0.9rem">
+                    <option value="permanent">Permanent</option>
+                    <option value="1h">1 Hour</option>
+                    <option value="6h">6 Hours</option>
+                    <option value="12h">12 Hours</option>
+                    <option value="1d">1 Day</option>
+                    <option value="3d">3 Days</option>
+                    <option value="7d">7 Days</option>
+                    <option value="14d">14 Days</option>
+                    <option value="30d">30 Days</option>
+                </select>
+            </div>
+            <div style="margin-bottom:1rem">
+                <label style="display:block;font-size:0.82rem;font-weight:600;margin-bottom:0.4rem;color:var(--text-sub)">Reason for ban <small style="color:var(--text-muted)">(shown to user)</small></label>
+                <textarea id="ban-modal-reason" name="ban_reason" rows="3" placeholder="E.g. Violated community guidelines, spam, harassment…"
+                    style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:0.65rem 0.9rem;color:var(--text);font-family:inherit;font-size:0.9rem;resize:vertical"></textarea>
+            </div>
+            <div style="display:flex;gap:0.6rem">
+                <button type="submit" class="btn btn-danger" style="flex:1">Confirm Ban</button>
+                <button type="button" class="btn" style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-muted)" onclick="closeBanModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>

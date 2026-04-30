@@ -20,7 +20,13 @@ foreach ($messages as $i => $m) {
 if ($idx === null) json_response(['success' => false, 'error' => 'Message not found.'], 404);
 if ((int)$messages[$idx]['sender_id'] !== $me['id']) json_response(['success' => false, 'error' => 'Unauthorized.'], 403);
 
+$deleted_msg = $messages[$idx];
+$other_id    = (int)$deleted_msg['receiver_id'];
+
 array_splice($messages, $idx, 1);
 db_write('messages.json', $messages);
+
+ws_push(['type' => 'delete_message', 'to_user_id' => $me['id'], 'message_id' => $message_id]);
+ws_push(['type' => 'delete_message', 'to_user_id' => $other_id, 'message_id' => $message_id]);
 
 json_response(['success' => true]);

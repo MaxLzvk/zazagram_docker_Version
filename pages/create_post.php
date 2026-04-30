@@ -55,6 +55,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
             $posts[] = $new_post;
             db_write('posts.json', $posts);
+            ws_push([
+                'type'      => 'new_post',
+                'broadcast' => true,
+                'post'      => $new_post,
+                'author'    => [
+                    'id'              => $me['id'],
+                    'username'        => $me['username'],
+                    'profile_picture' => $me['profile_picture'],
+                    'updated_at'      => $me['updated_at'],
+                    'role'            => $me['role'],
+                ],
+            ]);
             header('Location: ' . BASE_URL . '/pages/feed.php');
             exit;
         }
