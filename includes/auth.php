@@ -68,8 +68,18 @@ function is_superadmin(): bool {
  */
 function get_current_user_data(): ?array {
     if (!is_logged_in()) return null;
-    $users = db_read('users.json');
-    return db_find_one($users, 'id', $_SESSION['user_id']);
+    try {
+        $stmt = db()->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+        $stmt->execute([$_SESSION['user_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) return null;
+        $row['is_banned'] = (bool)$row['is_banned'];
+        return $row;
+    } catch (Throwable $e) {
+        // Fallback to JSON if DB unavailable
+        $users = db_read('users.json');
+        return db_find_one($users, 'id', $_SESSION['user_id']);
+    }
 }
 
 /**
