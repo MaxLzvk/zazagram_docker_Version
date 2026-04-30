@@ -39,6 +39,13 @@ services:
       timeout: 5s
       retries: 20
 
+  ws:
+    build: ./websocket
+    container_name: zazagram-ws
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: zazagram-phpmyadmin
