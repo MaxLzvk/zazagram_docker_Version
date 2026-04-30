@@ -33,7 +33,7 @@ try {
             echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Access Denied</title>
             <style>body{background:#080810;color:#fff;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1rem}
             h1{font-size:3rem;color:#ef4444}p{color:#888;font-size:1.1rem}</style></head>
-            <body><h1>🚫 403</h1><p>Your IP address has been blocked from accessing this site.</p></body></html>';
+            <body><h1><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5" style="width:0.85em;height:0.85em;vertical-align:-0.1em"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg> 403</h1><p>Your IP address has been blocked from accessing this site.</p></body></html>';
             exit;
         }
     }
@@ -59,7 +59,7 @@ $page_title = $page_title ?? 'Zazagram';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/main.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/main.css?v=<?= filemtime(__DIR__.'/../assets/css/main.css') ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/filters.css">
 </head>
 <body class="<?= htmlspecialchars($body_class ?? '') ?>">
@@ -72,7 +72,7 @@ $page_title = $page_title ?? 'Zazagram';
         </a>
 
         <div class="mobile-menu-row mobile-only" style="margin-left: auto;">
-            <button type="button" class="icon-btn menu-toggle" title="Menu" onclick="toggleMobileNav()">☰</button>
+            <button type="button" class="icon-btn menu-toggle" title="Menu" onclick="toggleMobileNav()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:1.3em;height:1.3em;vertical-align:-0.2em"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg></button>
         </div>
 
         <div class="desktop-only">
